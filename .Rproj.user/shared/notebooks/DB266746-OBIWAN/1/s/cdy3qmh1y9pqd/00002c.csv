@@ -1,0 +1,6 @@
+"0",""
+"0","BMI = ddply(df,~intervention,summarise,mean=mean(BMI1),sd=sd(BMI1), min = min(BMI1), max = max(BMI1)); "
+"0","BMI %>%"
+"0","  kbl(caption =""BMI"", digits = 2) %>%"
+"0","  kable_styling(latex_options = ""HOLD_position"", position = ""center"", full_width = F) %>%"
+"0","  row_spec(0,bold=T,align='c')"

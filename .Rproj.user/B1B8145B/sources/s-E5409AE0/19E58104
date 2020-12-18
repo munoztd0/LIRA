@@ -1,0 +1,33 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1608318716084.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "19E58104",
+    "lastKnownWriteTime" : 0,
+    "last_content_update" : 1608318716084,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "cacheKey" : "ECDD169C",
+        "caption" : "INST2",
+        "contentUrl" : "grid_resource/gridviewer.html?env=&obj=INST2&cache_key=ECDD169C",
+        "displayedObservations" : 1536,
+        "environment" : "",
+        "expression" : "INST2",
+        "object" : "INST2",
+        "preview" : 0,
+        "totalObservations" : 1536,
+        "variables" : 9
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 7,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_dataframe"
+}

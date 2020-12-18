@@ -1,0 +1,7 @@
+"0","df = PAV.means; df$intervention = as.factor(revalue(as.factor(df$intervention), c(""0""=""Placebo"", ""1""=""Liraglutide"")));#using pav.means but oculd be any other"
+"0",""
+"0","AGE = ddply(df,~intervention,summarise,mean=mean(age),sd=sd(age), min = min(age), max = max(age));"
+"0","AGE %>%"
+"0","  kbl(caption =""AGE"", digits = 2) %>%"
+"0","  kable_styling(latex_options = ""HOLD_position"", position = ""center"", full_width = F) %>%"
+"0","  row_spec(0,bold=T,align='c')"
