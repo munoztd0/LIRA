@@ -140,37 +140,40 @@ diff_base = baseline latency differences (mean(CS-) -  mean(CS+))
 model = aov_car(RT ~ condition*intervention + age + gender + thirsty + hungry + BMI_t1 +  diff_base + Error(id/condition), PAV.means, factorize = F, anova_table = list(correction = "GG", es = "none"))
 table = nice(model); 
 
+ref_grid(model)  #triple check everything is centered at 0
+
 #calculate Partial eta-squared and its 90 % CI for each effect
 pes_CI = pes_ci(RT ~ condition*intervention + age + gender + thirsty + hungry + BMI_t1 +  diff_base + Error(id/condition), PAV.means); 
-table$`PES` = pes_CI[,1]
-table$`Lower CI` = pes_CI[,2]
-table$`Upper CI` = pes_CI[,3]
+table$`PES` = round(pes_CI[,1],3)
+table$`Lower CI` = round(pes_CI[,2],3)
+table$`Upper CI` = round(pes_CI[,3],3)
 
 #calculate exclusion BF01 for each effect
 test = extractBF(generalTestBF(RT ~ condition*intervention + condition*age + condition*gender + condition*thirsty + condition*hungry + condition*BMI_t1 + condition*diff_base + id, data= PAV.means, whichRandom = 'id', neverExclude =  'id', whichModels ="top")); BF = 1/test[1] #switch to BF10 inclusion)); BF = 1/test[1] #switch to BF10 inclusion
-table$BF10 = BF$bf[order(c(15,14,13,13,11,10,9,7,6,5,4,3,2,1,8))] # reorder
+table$BF10 = BF$bf[order(c(15,14,13,12,11,10,9,7,6,5,4,3,2,1,8))] # reorder
 
-mod <- lm(RT ~ condition*intervention + condition*age + condition*gender + condition*thirsty + condition*hungry + condition*BMI_t1 + condition*diff_base, data = PAV.means)
-
-ref_grid(mod)  #triple check everything is centered at 0
-tab_model(mod, show.p = F,show.intercept = F, show.se = T, title ="", show.re.var = F, digits = 3, dv.labels = "Latency", emph.p = TRUE, file = "tmp/temp1.html")#pred.labels=c("CS+", "Lean", "Interaction (Lean:CS+)")
+  mod <- lm(RT ~ condition*intervention + condition*age + condition*gender + condition*thirsty + condition*hungry + condition*BMI_t1 + condition*diff_base, data = PAV.means)
+  
+  
+  tab_model(mod, show.p = F,show.intercept = F, show.se = T, title ="", show.re.var = F, digits = 2, dv.labels = "Latency", emph.p = TRUE, file = "tmp/temp1.html")#pred.labels=c("CS+", "Lean", "Interaction (Lean:CS+)")
 ```
 \
 ```{r PAV_RT_mod}
 tables <- list.clean(readHTMLTable("tmp/temp1.html"), fun = is.null, recursive = FALSE)
 tables2 = tables[[1]] %>% janitor::row_to_names(row_number = 1)
+
 tables2 <- as.matrix(tables2) %>% as_tibble()
 tables2[is.na(tables2)] <- ""
-tables2[1:15,1:4] %>% kbl(caption ="Latency (ms)" ) %>%
+tables2[1:15,1:4] %>% kbl(caption ="Latency (ms)", ) %>%
   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(0,bold=T,align='c')
 tmp =tables2[16:17,1:2]
 names(tmp) <- NULL
-tmp %>% kbl() %>%
+tmp %>% kbl(digits = 2) %>%
   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) 
 ```
 \
 ```{r PAV_RT_res}
-table %>% kbl(digits = 2) %>%
+table %>% kbl(digits = 3) %>%
   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(0,bold=T,align='c')
 ```
 \
@@ -229,35 +232,36 @@ diff_base_lik = baseline liking differences (mean(CS+) -  mean(CS-))
 model = aov_car(liking ~ condition*intervention + age + gender + thirsty + hungry + BMI_t1 +  diff_base_lik + Error(id/condition), data= df, factorize = F, anova_table = list(correction = "GG", es = "none"))
 table = nice(model); 
 
+ref_grid(model)  #triple check everything is centered at 0
+
 #calculate Partial eta-squared and its 90 % CI for each effect
 pes_CI = pes_ci(liking ~ condition*intervention + age + gender + thirsty + hungry + BMI_t1 +  diff_base_lik + Error(id/condition), PAV.means); 
-table$`PES` = pes_CI[,1]
-table$`Lower CI` = pes_CI[,2]
-table$`Upper CI` = pes_CI[,3]
+table$`PES` = round(pes_CI[,1],3)
+table$`Lower CI` = round(pes_CI[,2],3)
+table$`Upper CI` = round(pes_CI[,3],3)
 
 #calculate exclusion BF01 for each effect
 test = extractBF(generalTestBF(liking ~ condition*intervention + condition*age + condition*gender + condition*thirsty + condition*hungry + condition*BMI_t1 + condition*diff_base_lik + id, data= PAV.means, whichRandom = 'id', neverExclude =  'id', whichModels ="top")); BF = 1/test[1] #switch to BF10 inclusion)); BF = 1/test[1] #switch to BF10 inclusion
-table$BF10 = BF$bf[order(c(15,14,13,13,11,10,9,7,6,5,4,3,2,1,8))] # reorder
-table$BF10[6] = formatC(BF$bf[11], format = "e", digits = 2)
+table$BF10 = round(BF$bf[order(c(15,14,13,13,11,10,9,7,6,5,4,3,2,1,8))],2) # reorder
+#table$BF10[6] = formatC(BF$bf[11], format = "e", digits = 2)
 
 mod <- lm(liking ~  condition*intervention + condition*age + condition*gender + condition*thirsty + condition*hungry + condition*BMI_t1 + condition*diff_base_lik, data = PAV.means) # for estimated means
 
-ref_grid(model)  #triple check everything is centered at 0
-tab_model(mod, show.p = F,show.intercept = F, show.se = T,  title ="", show.re.var = F, digits = 3, dv.labels = "Pleasantness Ratings (Pavlovian Cue)", emph.p = TRUE, file = "tmp/temp2.html")#pred.labels=c("CS+", "Lean", "Interaction (Lean:CS+)")
+tab_model(mod, show.p = F,show.intercept = F, show.se = T,  title ="", show.re.var = F, digits = 2, dv.labels = "Pleasantness Ratings (Pavlovian Cue)", emph.p = TRUE, file = "tmp/temp2.html")#pred.labels=c("CS+", "Lean", "Interaction (Lean:CS+)")
 ```
 ```{r PAV_lik_res}
 tables <- list.clean(readHTMLTable("tmp/temp2.html"), fun = is.null, recursive = FALSE)
 tables2 = tables[[1]] %>% janitor::row_to_names(row_number = 1)
 tables2 <- as.matrix(tables2) %>% as_tibble()
 tables2[is.na(tables2)] <- ""
-tables2[1:11,1:4] %>% kbl(caption ="Pleasantness Ratings (Pavlovian Cue)" ) %>%
+tables2[1:15,1:4] %>% kbl(caption ="Pleasantness Ratings (Pavlovian Cue)" ) %>%
   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(0,bold=T,align='c')
-tmp =tables2[12:13,1:2]
+tmp =tables2[16:17,1:2]
 names(tmp) <- NULL
 tmp %>% kbl() %>%
   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) 
 
-table %>% kbl( digits = 2) %>%
+table %>% kbl(digits = 3) %>%
   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(0,bold=T,align='c')
 ```
 
@@ -299,20 +303,23 @@ dev.off()
 # Instrumental Conditioning Task (Analysis)
 Formula = Number of grips ~ spline*intervention + age + gender + thirsty + hungry + BMI_t1  + diff_base + Error(id/spline)\
 grips = number of times participant exceeded the force threshold to acquire the reward (Milkshake)
+spline = first 5 trials (0), last 20 trials (1)
 
 ```{r INST, cache=TRUE,  include=FALSE, message=FALSE}
 model = aov_car(grips ~ spline*intervention + age + gender + thirsty + hungry + BMI_t1  + diff_base + Error(id/spline), data= INST.means, factorize = F, anova_table = list(correction = "GG", es = "none"))
 table = nice(model); 
 
+ref_grid(model)  #triple check everything is centered at 0
+
 #calculate Partial eta-squared and its 90 % CI for each effect
 pes_CI = pes_ci(grips ~ spline*intervention + age + gender + thirsty + hungry + BMI_t1  + diff_base + Error(id/spline), INST.means); 
-table$`PES` = pes_CI[,1]
-table$`Lower CI` = pes_CI[,2]
-table$`Upper CI` = pes_CI[,3]
+table$`PES` = round(pes_CI[,1],3)
+table$`Lower CI` = round(pes_CI[,2],3)
+table$`Upper CI` = round(pes_CI[,3],3)
 
 #calculate exclusion BF01 for each effect
 test = extractBF(generalTestBF(grips ~ spline*intervention + spline*age + spline*gender + spline*thirsty + spline*hungry + spline*BMI_t1  + spline*diff_base + id, data= INST.means, whichRandom = 'id', neverExclude =  'id', whichModels ="top")); BF = 1/test[1] #switch to BF10 inclusion)); BF = 1/test[1] #switch to BF10 inclusion
-table$BF10 = BF$bf[order(c(15,14,13,13,11,10,9,7,6,5,4,3,2,1,8))] # reorder
+table$BF10 = round(BF$bf[order(c(15,14,13,13,11,10,9,7,6,5,4,3,2,1,8))],2) # reorder
 #table$BF10[6] = formatC(BF$bf[11], format = "e", digits = 2)
 
 mod <- lm(grips ~ spline*intervention + spline*age + spline*gender + spline*thirsty + spline*hungry + spline*BMI_t1  + spline*diff_base, data = INST.means) # for estimated means
@@ -320,7 +327,7 @@ mod <- lm(grips ~ spline*intervention + spline*age + spline*gender + spline*thir
 
 #model$Effect = c('trial-spline(5)', 'group', 'age', 'gender', 'thirsty', 'hungry', 'trial-spline(5)*group') #make it nice
 
-tab_model(mod, show.p = F,show.intercept = F, show.se = T, title ="", show.re.var = F, digits = 3, dv.labels = "Number of grips", emph.p = TRUE, file = "tmp/temp3.html") # pred.labels=c("trial &#60 5", "trial > 5", "group[1]", "age", "gender[1]", "thirsty", "hungry", "trial &#60 5 * group[1]", "trial > 5 * group[1]")
+tab_model(mod, show.p = F,show.intercept = F, show.se = T, title ="", show.re.var = F, digits = 2, dv.labels = "Number of grips", emph.p = TRUE, file = "tmp/temp3.html") # pred.labels=c("trial &#60 5", "trial > 5", "group[1]", "age", "gender[1]", "thirsty", "hungry", "trial &#60 5 * group[1]", "trial > 5 * group[1]")
 ```
 ```{r INST_mod_tab}
 tables <- list.clean(readHTMLTable("tmp/temp3.html"), fun = is.null, recursive = FALSE)
@@ -369,11 +376,11 @@ pp <- ggplot(INST.means, aes(x = cond, y = grips,
   theme_bw()
 
 
-pp + html_theme 
-plt = pp + averaged_theme 
+pp + html_theme +theme(legend.title  = element_text(size = 9),legend.text  = element_text(size = 9),legend.position=c(.92,.92))
+plt = pp + averaged_theme +theme(legend.title  = element_text(size = 10),legend.text  = element_text(size = 8),legend.position=c(.91,.91))
 ```
 ```{r INST_saveFIG, echo=FALSE, include = FALSE, warning=FALSE}
-cairo_pdf('figures/Figure_Instrumental_trial.pdf')
+cairo_pdf('figures/Figure_INST_trial_LIRA.pdf')
 print(plt)
 dev.off()
 ```
@@ -418,31 +425,31 @@ dev.off()
 
 
 # Pavlvovian-Instrumental Transfer (PIT) Task (Analysis)
-Formula = Mobilized effort ~ condition*group + age + gender+ thirsty + hungry + (condition|id)\
+Formula = Mobilized effort ~ condition*intervention + age + gender + thirsty + hungry + BMI_t1  + diff_baseline + Error(id/condition)\
 Mobilized effort = Area under the curve of the force exerted exceeding the delivery threshold during Pavlvoian cue presentation
 ```{r PIT, echo=FALSE, include=FALSE, cache=TRUE}
 # -------------------------------------- STATS -----------------------------------------------
-### Linear Mixed Models 
-# Mixed is just a wrapper for lmer to get p-values from parametric bootstrapping #but set to method "LRT" and remove "args_test" to quick check ##
-#model = mixed(formula, data = PIT.clean, method = "LRT", control = control, REML = FALSE)
-#model = mixed(formula, data = PIT.clean, method = "PB", control = control, REML = FALSE, args_test = list(nsim = 10000, cl=cl)) 
 
-model = aov_car(AUC ~ condition*group + age + gender+ thirsty + hungry +  Error(id/condition), data= PIT.means, factorize = F, anova_table = list(correction = "GG", es = "none"))
+model = aov_car(AUC ~ condition*intervention + age + gender + thirsty + hungry + BMI_t1  + diff_base + Error(id/condition), data= PIT.means, factorize = F, anova_table = list(correction = "GG", es = "none"))
 table = nice(model); 
 
+ref_grid(model)  #triple check everything is centered at 0
+
 #calculate Partial eta-squared and its 90 % CI for each effect
-pes_CI = pes_ci(AUC ~ condition*group + age + gender+ thirsty + hungry +  Error(id/condition), PIT.means); 
-table$`PES` = pes_CI[,1]
-table$`Lower CI` = pes_CI[,2]
-table$`Upper CI` = pes_CI[,3]
+pes_CI = pes_ci(AUC ~ condition*intervention + age + gender + thirsty + hungry + BMI_t1  + diff_base + Error(id/condition), PIT.means); 
+table$`PES` = round(pes_CI[,1],3)
+table$`Lower CI` = round(pes_CI[,2],3)
+table$`Upper CI` = round(pes_CI[,3],3)
 
 #calculate exclusion BF01 for each effect
-test = extractBF(generalTestBF(AUC ~ condition*group + condition*age + condition*gender + condition*thirsty + condition*hungry + id, data= PIT.means, whichRandom = 'id', neverExclude =  'id', whichModels ="top")); BF = 1/test[1] #switch to BF10 inclusion)); BF = 1/test[1] #switch to BF10 inclusion
-table$BF10 = BF$bf[order(c(11,10,9,8,7,5,4,3,2,1,6))] # reorder
+test = extractBF(generalTestBF(AUC ~ condition*intervention + condition*age + condition*gender + condition*thirsty + condition*hungry + condition*BMI_t1  + condition*diff_base + id, data= PIT.means, whichRandom = 'id', neverExclude =  'id', whichModels ="top")); BF = 1/test[1] #switch to BF10 inclusion)); BF = 1/test[1] #switch to BF10 inclusion
+table$BF10 = round(BF$bf[order(c(15,14,13,13,11,10,9,7,6,5,4,3,2,1,8))],2) # reorder
+#table$BF10[6] = formatC(BF$bf[11], format = "e", digits = 2)
 
-mod <- lmer(AUC ~ condition*group + condition*age + condition*gender+ condition*thirsty + condition*hungry + (condition|id), data = PIT.clean, control = control, REML = T) # recompute model with REML = T now for further analysis
 
-tab_model(mod, show.p = F,show.intercept = F, show.se = T, title ="", show.re.var = F, digits = 3, dv.labels = "Mobilized effort (a.u.)", file = "tmp/temp4.html") #, pred.labels=c("CS+", "Lean", "Interaction (Lean:CS+)")
+mod <- lm(AUC ~ condition*intervention + condition*age + condition*gender + condition*thirsty + condition*hungry + condition*BMI_t1  + condition*diff_base, data = PIT.means)
+
+tab_model(mod, show.p = F,show.intercept = F, show.se = T, title ="", show.re.var = F, digits = 2, dv.labels = "Mobilized effort (a.u.)", file = "tmp/temp4.html") #, pred.labels=c("CS+", "Lean", "Interaction (Lean:CS+)")
 ```
 \
 ```{r PIT_mod, echo=FALSE}
@@ -450,18 +457,17 @@ tables <- list.clean(readHTMLTable("tmp/temp4.html"), fun = is.null, recursive =
 tables2 = tables[[1]] %>% janitor::row_to_names(row_number = 1)
 tables2 <- as.matrix(tables2) %>% as_tibble()
 tables2[is.na(tables2)] <- ""
-tables2[1:11,1:4] %>% kbl(caption ="Mobilized effort (a.u.)" ) %>%
+tables2[1:15,1:4] %>% kbl(caption ="Mobilized effort (a.u.)" ) %>%
   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F)  %>%  row_spec(0,bold=T,align='c')
 
-tmp =tables2[12:15,1:2]
+tmp =tables2[16:17,1:2]
 names(tmp) <- NULL
 tmp %>% kbl() %>%
   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F)  
-
 ```
 
 ```{r PIT_res}
-table %>% kbl( digits = 2) %>%
+table %>% kbl(digits = 3) %>%
   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(0,bold=T,align='c')
 ```
 \
@@ -469,139 +475,134 @@ table %>% kbl( digits = 2) %>%
 #p_cond = emmeans(mod, pairwise~ condition, side = ">"); p_cond #for condition (CS+ > CS- right sided)
 #CI_cond = confint(emmeans(mod, pairwise~ condition),level = 0.95, method = c("boot"), nsim = 5000); #CI_cond$contrasts #get CI condition
 
-inter = emmeans(model, pairwise~ condition|group, adjust = "tukey", side = ">")  #for group X condition (adjusted but still right sided)
-CI_inter = confint(emmeans(model, pairwise~ condition|group),level = 0.95,method = c("boot"),nsim = 5000) ##get CI inter
-tmp = as_tibble(inter$contrasts); 
-tab =as_tibble(CI_inter$contrasts); tab$contrast = "CS+ > CS-"; tab$group = c("Lean", "Obese"); tab$T = tmp$t.ratio; tab$p.value = tmp$p.value; 
+# inter = emmeans(model, pairwise~ condition|group, adjust = "tukey", side = ">")  #for group X condition (adjusted but still right sided)
+# CI_inter = confint(emmeans(model, pairwise~ condition|group),level = 0.95,method = c("boot"),nsim = 5000) ##get CI inter
+# tmp = as_tibble(inter$contrasts); 
+# tab =as_tibble(CI_inter$contrasts); tab$contrast = "CS+ > CS-"; tab$group = c("Lean", "Obese"); tab$T = tmp$t.ratio; tab$p.value = tmp$p.value; 
 ```
 \
 ```{r PIT_cont_tab}
-tab %>% kbl(caption = "Post-Hoc test CS+ > CS- by group (adjusted Tukey HSD)", digits = 3) %>%
-  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(0,bold=T,align='c')
+# tab %>% kbl(caption = "Post-Hoc test CS+ > CS- by group (adjusted Tukey HSD)", digits = 3) %>%
+#   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(0,bold=T,align='c')
 ```
 
 ## Mobilized effort (AUC) difference (CS+ > CS-) by group
 ```{r PIT_plot, echo=FALSE, warning=FALSE, cache=TRUE}
-
+interactions::interact_plot(mod,pred = 'diff_base', modx = 'condition')
 # create bin for each mini block
 #PIT.clean$trialxcondition    <- as.numeric(PIT.clean$trialxcondition)
 #PIT.clean  <- ddply(PIT.clean, "id", transform, bin = as.numeric(cut2(trialxcondition, g = 5)))
 
-PIT.s <- subset (PIT.clean, condition == '1'| condition == '-1')
-PIT.s$trialxcondition <- factor(PIT.s$trialxcondition)
-PIT.means <- aggregate(PIT.s$AUC, by = list(PIT.s$id, PIT.s$condition, PIT.s$group), FUN='mean') # extract means
-colnames(PIT.means) <- c('id','condition', 'group', 'force')
 
 #PIT.trial <- aggregate(PIT.s$AUC, by = list(PIT.s$id, PIT.s$trialxcondition), FUN='mean') # extract means
 #colnames(PIT.trial) <- c('id','trialxcondition','force')
 
 ### Plot between contrasts
-
-df_est = emmeans(mod, pairwise~ condition|group) # estimate contrasts means by group from the model 
-dfP = data.frame(df_est$contrasts); dfP$force = dfP$estimate #create a dataframe
-CSp = subset(PIT.means, condition == '1'); CSm = subset(PIT.means, condition == '-1'); cont.means = CSp
-cont.means$force = CSp$force - CSm$force; 
-
-dfP$groupi <- ifelse(dfP$group == "1", -0.25, 0.25)
-cont.means$groupi <- ifelse(cont.means$group == "1", -0.25, 0.25)
-set.seed(666)
-cont.means <- cont.means %>% mutate(groupjit = jitter(as.numeric(groupi), 0.25),
-                                    grouping = interaction(id, groupi))
-
-
-pp <- ggplot(cont.means, aes(x = groupi, y = force, 
-                             fill = group, color = group)) +
-  geom_hline(yintercept=0, linetype="dashed", size=0.4, alpha=0.8) +
-  geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(fill = group, color = NA))+
-  geom_point(aes(x = groupjit), alpha = .3,) +
-  geom_crossbar(data = dfP, aes(y = force, ymin=force-SE, ymax=force+SE), width = 0.2 , alpha = 0.1)+
-  #geom_errorbar(data = dfP,aes(group = group, ymin=force-SE, ymax=force+SE),position=position_nudge(x=0.15), size=0.5, width=0.1,  color = "black") + 
-  ylab('\u0394 Mobilized effort (CS+ > CS-)')+
-  xlab('')+
-  scale_fill_manual(values=c("1" = pal[6],"0"=pal[1]), guide = 'none') +
-  scale_color_manual(values=c("1" = pal[6],"0"=pal[1]), guide = 'none')  +
-  scale_y_continuous(expand = c(0, 0), breaks = c(seq.int(-200,200, by = 50)), limits = c(-200.5,200.5)) +
-  scale_x_continuous(labels=c("Obese", "Lean"),breaks = c(-.25,.25), limits = c(-.5,.5)) +
-  theme_bw() 
-
-plt = pp + averaged_theme 
-pp + html_theme 
+# 
+# df_est = emmeans(mod, pairwise~ condition|session) # estimate contrasts means by group from the model 
+# dfP = data.frame(df_est$contrasts); dfP$force = dfP$estimate #create a dataframe
+# CSp = subset(PIT.means, condition == '1'); CSm = subset(PIT.means, condition == '-1'); cont.means = CSp
+# cont.means$force = CSp$force - CSm$force; 
+# 
+# dfP$groupi <- ifelse(dfP$group == "1", -0.25, 0.25)
+# cont.means$groupi <- ifelse(cont.means$group == "1", -0.25, 0.25)
+# set.seed(666)
+# cont.means <- cont.means %>% mutate(groupjit = jitter(as.numeric(groupi), 0.25),
+#                                     grouping = interaction(id, groupi))
+# 
+# 
+# pp <- ggplot(cont.means, aes(x = groupi, y = force, 
+#                              fill = group, color = group)) +
+#   geom_hline(yintercept=0, linetype="dashed", size=0.4, alpha=0.8) +
+#   geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(fill = group, color = NA))+
+#   geom_point(aes(x = groupjit), alpha = .3,) +
+#   geom_crossbar(data = dfP, aes(y = force, ymin=force-SE, ymax=force+SE), width = 0.2 , alpha = 0.1)+
+#   #geom_errorbar(data = dfP,aes(group = group, ymin=force-SE, ymax=force+SE),position=position_nudge(x=0.15), size=0.5, width=0.1,  color = "black") + 
+#   ylab('\u0394 Mobilized effort (CS+ > CS-)')+
+#   xlab('')+
+#   scale_fill_manual(values=c("1" = pal[6],"0"=pal[1]), guide = 'none') +
+#   scale_color_manual(values=c("1" = pal[6],"0"=pal[1]), guide = 'none')  +
+#   scale_y_continuous(expand = c(0, 0), breaks = c(seq.int(-200,200, by = 50)), limits = c(-200.5,200.5)) +
+#   scale_x_continuous(labels=c("Obese", "Lean"),breaks = c(-.25,.25), limits = c(-.5,.5)) +
+#   theme_bw() 
+# 
+# plt = pp + averaged_theme 
+# pp + html_theme 
 ```
 ```{r PIT_saveFIG, echo=FALSE, include = FALSE, warning=FALSE}
-cairo_pdf('figures/Figure_PIT_con.pdf')
-print(plt)
-dev.off()
+# cairo_pdf('figures/Figure_PIT_con.pdf')
+# print(plt)
+# dev.off()
 ```
 
 ## Mobilized effort (AUC) over time
 ```{r PIT_time, echo=FALSE, warning=FALSE, cache=TRUE}
 # PLOT OVERTIME
-labels <- c("0" = "Lean", "1" = "Obese")
-PIT.p <- summarySEwithin(PIT.clean,
-                         measurevar = "AUC",
-                         withinvars = c("trialxcondition","condition"),
-                         betweenvars = "group",
-                         idvar = "id")
 
-PIT.p$trial <- as.numeric(PIT.p$trialxcondition)
-PIT.p = select(PIT.p, c('trial', 'N' , 'AUC', 'sd', 'se', 'ci', 'condition', 'group'))
-
-
-# plot 
-pp <- ggplot(PIT.p, aes(x = as.numeric(trial), y = AUC,
-                        color = condition, 
-                        fill  = condition))+
-  geom_line(alpha = .5, size = 1, show.legend = F) +
-  geom_ribbon(aes(ymax = AUC + se, ymin = AUC - se),  alpha=0.4) + 
-  geom_point() +
-  ylab('Mobilized effort (a.u.)')+
-  xlab('Trial')+
-  scale_color_manual(labels = c('-1'= 'CS-', "1" = 'CS+'), name="", 
-                     values = c("1"= pal[2], '-1'= pal[1])) +
-  scale_fill_manual(labels = c('-1'= 'CS-', "1" = 'CS+'), name="", 
-                    values = c("1"= pal[2], '-1'= pal[1])) +
-  scale_y_continuous(expand = c(0, 0),  limits = c(50,200),  breaks=c(seq.int(50,200, by = 50))) +
-  scale_x_continuous(expand = c(0, 0),  limits = c(0,15),  breaks=c(seq.int(1,15, by = 2))) +
-  theme_bw() +
-  facet_wrap(~group, labeller=labeller(group = labels))
-
-
-pp + html_theme + theme(strip.background = element_rect(fill="white"), legend.key.size = unit(0.3, "cm"), axis.text.x = element_text(size = 16))
-plt = pp + averaged_theme + theme(strip.background = element_rect(fill="white"), legend.key.size = unit(0.8, "cm"), axis.text.x = element_text(size = 16))
+# 
+# labels <- c("0" = "Placebo", "1" = "Liraglutide")
+# PIT.p <- summarySEwithin(PIT.clean,
+#                          measurevar = "AUC",
+#                          withinvars = c("trialxcondition","condition"),
+#                          betweenvars = "group",
+#                          idvar = "id")
+# 
+# PIT.p$trial <- as.numeric(PIT.p$trialxcondition)
+# PIT.p = select(PIT.p, c('trial', 'N' , 'AUC', 'sd', 'se', 'ci', 'condition', 'group'))
+# 
+# 
+# # plot 
+# pp <- ggplot(PIT.p, aes(x = as.numeric(trial), y = AUC,
+#                         color = condition, 
+#                         fill  = condition))+
+#   geom_line(alpha = .5, size = 1, show.legend = F) +
+#   geom_ribbon(aes(ymax = AUC + se, ymin = AUC - se),  alpha=0.4) + 
+#   geom_point() +
+#   ylab('Mobilized effort (a.u.)')+
+#   xlab('Trial')+
+#   scale_color_manual(labels = c('-1'= 'CS-', "1" = 'CS+'), name="", 
+#                      values = c("1"= pal[2], '-1'= pal[1])) +
+#   scale_fill_manual(labels = c('-1'= 'CS-', "1" = 'CS+'), name="", 
+#                     values = c("1"= pal[2], '-1'= pal[1])) +
+#   scale_y_continuous(expand = c(0, 0),  limits = c(50,200),  breaks=c(seq.int(50,200, by = 50))) +
+#   scale_x_continuous(expand = c(0, 0),  limits = c(0,15),  breaks=c(seq.int(1,15, by = 2))) +
+#   theme_bw() +
+#   facet_wrap(~group, labeller=labeller(group = labels))
+# 
+# 
+# pp + html_theme + theme(strip.background = element_rect(fill="white"), legend.key.size = unit(0.3, "cm"), axis.text.x = element_text(size = 16))
+# plt = pp + averaged_theme + theme(strip.background = element_rect(fill="white"), legend.key.size = unit(0.8, "cm"), axis.text.x = element_text(size = 16))
 ```
 ```{r PIT_time_saveFIG, echo=FALSE, include = FALSE, warning=FALSE}
-cairo_pdf('figures/Figure_PIT_time.pdf')
-print(plt)
-dev.off()
+# cairo_pdf('figures/Figure_PIT_time.pdf')
+# print(plt)
+# dev.off()
 ```
 # Hedonic Reactivity Test (Analysis)
-Formula = Pleasantness ratings ~ condition*group + age + gender+ thirsty + hungry + intensity + Error(id/condition)\
+Formula = Pleasantness ratings ~ condition*intervention + age + gender + thirsty + hungry + BMI_t1  + diff_base + intensity + Error(id/condition)\
 Pleasantness ratings = how pleasant is the liquid solution rated (0-100, with repetitions)   &   condition = Milshake or Tasteless   &   intensity = difference on how intense the liquid solution were rated (mean(Milshake) - mean(Tasteless))
 ```{r HED, echo=FALSE, include=FALSE, cache=TRUE}
-# -------------------------------------- STATS -----------------------------------------------
+# -------------------------------------- STATS ----------------------------------------------
 
-### Linear Mixed Models 
-# Mixed is just a wrapper for lmer to get p-values from parametric bootstrapping #but set to method "LRT" and remove "args_test" to quick check ##
-#model = mixed(formula, data = HED, method = "LRT", control = control, REML = FALSE); 
-#model = mixed(formula, data = HED, method = "PB", control = control, REML = FALSE, args_test = list(nsim = 10000, cl=cl)) 
-model = aov_car(perceived_liking ~ condition*group + age + gender+ thirsty + hungry + intensity + Error(id/condition), data= HED.means, factorize = F, anova_table = list(correction = "GG", es = "none"))
+model = aov_car(liking ~ condition*intervention + age + gender + thirsty + hungry + BMI_t1  + diff_base + int + Error(id/condition), data= HED.means, factorize = F, anova_table = list(correction = "GG", es = "none"))
 table = nice(model); 
 
+ref_grid(model)  #triple check everything is centered at 0
+
 #calculate Partial eta-squared and its 90 % CI for each effect
-pes_CI = pes_ci(perceived_liking ~ condition*group + age + gender+ thirsty + hungry + intensity + Error(id/condition), HED.means); 
-table$`PES` = pes_CI[,1]
-table$`Lower CI` = pes_CI[,2]
-table$`Upper CI` = pes_CI[,3]
+pes_CI = pes_ci(liking ~ condition*intervention + age + gender + thirsty + hungry + BMI_t1  + diff_base + int + Error(id/condition), data= HED.means); 
+table$`PES` = round(pes_CI[,1],3)
+table$`Lower CI` = round(pes_CI[,2],3)
+table$`Upper CI` = round(pes_CI[,3],3)
 
 #calculate exclusion BF01 for each effect
-test = extractBF(generalTestBF(perceived_liking ~ condition*group + condition*age + condition*gender + condition*thirsty + condition*hungry + condition*intensity + id, data= HED.means, whichRandom = 'id', neverExclude =  'id', whichModels ="top")); BF = 1/test[1] #switch to BF10 inclusion)); BF = 1/test[1] #switch to BF10 inclusion
-table$BF10 = round(BF$bf[order(c(13, 12, 11, 10,  9,  8, 6,  5,  4,  3,  2, 1, 7))],2) # reorder
-table$BF10[7] = formatC(BF$bf[13], format = "e", digits = 2)
+test = extractBF(generalTestBF(liking ~ condition*intervention + condition*age + condition*gender + condition*thirsty + condition*hungry + condition*BMI_t1  + condition*diff_base + condition*int + id, data= HED.means, whichRandom = 'id', neverExclude =  'id', whichModels ="top")); BF = 1/test[1] #switch to BF10 inclusion)); BF = 1/test[1] #switch to BF10 inclusion
+table$BF10 = round(BF$bf[order(c(17, 16, 15, 14, 13, 12, 11, 10,  8,  7, 6,  5,  4,  3,  2, 1, 9))],2) # reorder
+table$BF10[c(9,16)] = formatC(table$BF10[c(9,16)], format = "e", digits = 2)
 
-mod <- lmer(perceived_liking ~ condition*group + age + gender+ thirsty + hungry  +  familiarity + intensity + (condition |id), data = HED, control = control, REML = T) # recompute model with REML = T now for further analysis
-ref_grid(mod)  #triple check everything is centered at 0
+mod <- lm(liking ~ condition*intervention + condition*age + condition*gender + condition*thirsty + condition*hungry + condition*BMI_t1  + condition*diff_base + condition*int, data=HED.means)
 
-tab_model(mod, show.p = F,show.intercept = F, show.se = T,  title ="", show.re.var = F, digits = 3, dv.labels = "Pleasantness Ratings", file = "tmp/temp5.html")
+tab_model(mod, show.p = F,show.intercept = F, show.se = T,  title ="", show.re.var = F, digits = 2, dv.labels = "Pleasantness Ratings", file = "tmp/temp5.html")
 ```
 \
 ```{r HED_mod, echo=FALSE, warning=FALSE}
@@ -609,17 +610,17 @@ tables <- list.clean(readHTMLTable("tmp/temp5.html"), fun = is.null, recursive =
 tables2 = tables[[1]] %>% janitor::row_to_names(row_number = 1)
 tables2 <- as.matrix(tables2) %>% as_tibble()
 tables2[is.na(tables2)] <- ""
-tables2[1:11,1:4] %>% kbl(caption ="Pleasantness ratings (taste)" ) %>%
+tables2[1:17,1:4] %>% kbl(caption ="Pleasantness ratings (taste)" ) %>%
   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F)  %>%  row_spec(0,bold=T,align='c')
 
-tmp =tables2[12:16,1:2]
+tmp =tables2[18:19,1:2]
 names(tmp) <- NULL
 tmp %>% kbl() %>%
   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F)  
 ```
 
 ```{r HED_res}
-table %>% kbl( digits = 2) %>%
+table %>% kbl(digits = 3) %>%
   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(0,bold=T,align='c')
 ```
 
@@ -628,7 +629,7 @@ table %>% kbl( digits = 2) %>%
 
 # AVERAGED EFFECT
 dfH <- summarySEwithin(HED.means,
-                       measurevar = "perceived_liking",
+                       measurevar = "liking",
                        withinvars = "condition", 
                        idvar = "id")
 
@@ -639,74 +640,74 @@ HED.means <- HED.means %>% mutate(condjit = jitter(as.numeric(cond), 0.3),
                                   grouping = interaction(id, cond))
 
 
-pp <- ggplot(HED.means, aes(x = cond, y = perceived_liking, 
+pp <- ggplot(HED.means, aes(x = cond, y = liking, 
                             fill = condition, color = condition)) +
   geom_point(data = dfH, alpha = 0.5) +
-  geom_line(aes(x = condjit, group = id, y = perceived_liking), alpha = .3, size = 0.5, color = 'gray') +
+  geom_line(aes(x = condjit, group = id, y = liking), alpha = .3, size = 0.5, color = 'gray') +
   geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(fill = condition, color = NA))+
-  geom_point(aes(x = condjit, shape = group), alpha = .3,) +
-  geom_crossbar(data = dfH, aes(y = perceived_liking, ymin=perceived_liking-se, ymax=perceived_liking+se), width = 0.2 , alpha = 0.1)+
+  geom_point(aes(x = condjit, shape = intervention), alpha = .3,) +
+  geom_crossbar(data = dfH, aes(y = liking, ymin=liking-se, ymax=liking+se), width = 0.2 , alpha = 0.1)+
   ylab('Perceived liking') +
   xlab('Taste') +
   scale_y_continuous(expand = c(0, 0), breaks = c(seq.int(0,100, by = 20)), limits = c(-0.5,100.5)) +
   scale_x_continuous(labels=c("Pleasant", "Neutral"),breaks = c(-.25,.25), limits = c(-.5,.5)) +
   scale_fill_manual(values=c("1"= pal[3], "-1"=pal[1]), guide = 'none') +
   scale_color_manual(values=c("1"=pal[3], "-1"=pal[1]), guide = 'none') +
-  scale_shape_manual(name="Group", labels=c("Lean", "Obese"), values = c(1, 2)) +
+  scale_shape_manual(name="Intervention", labels=c("Placebo", "Liraglutide"), values = c(1, 2)) +
   theme_bw()
 
 plt <- pp + averaged_theme
 pp + html_theme
 ```
 ```{r HED_saveFIG, echo=FALSE, include = FALSE, warning=FALSE}
-cairo_pdf('figures/Figure_HED.pdf')
+cairo_pdf('figures/Figure_HED_Lira.pdf')
 print(plt)
 dev.off()
 ```
 ## Pleasantness Ratings over time
 ```{r HED_time, echo=FALSE, warning=FALSE, cache=TRUE}
-
-# OVERTIME
-HED.t <- summarySEwithin(HED,
-                         measurevar = "perceived_liking",
-                         withinvars = c("trialxcondition","condition"),
-                         idvar = "id")
-
-HED.tg <- summarySEwithin(HED,
-                          measurevar = "perceived_liking",
-                          withinvars = c("trialxcondition","condition"),
-                          betweenvars = 'group',
-                          idvar = "id")
-
-
-# plot 
-pp <- ggplot(HED.t, aes(x = as.numeric(trialxcondition), y = perceived_liking,
-                        color =condition, fill = condition)) +
-  geom_point(data = HED.tg, aes(shape=group), alpha = 0.5) +
-  geom_point(data = HED.t) +
-  geom_line(alpha = .7, size = 1) +
-  geom_ribbon(aes(ymax = perceived_liking + se, ymin = perceived_liking - se),  alpha=0.4) + 
-  ylab('Perceived liking')+
-  xlab('Trial') +
-  scale_shape_manual(name="Group", labels=c("Lean", "Obese"), values = c(1, 2)) +
-  scale_color_manual(labels = c('Pleasant', 'Neutral'), name = "",
-                     values = c( "1" =pal[3], '-1' =pal[1])) +
-  scale_fill_manual(labels = c('Pleasant', 'Neutral'), name = "",
-                    values = c( "1" =pal[3], '-1'=pal[1])) +
-  scale_y_continuous(expand = c(0, 0),  limits = c(40,100),  breaks=c(seq.int(50,100, by = 10))) +
-  scale_x_continuous(expand = c(0, 0),  limits = c(-0.09,20.09),  breaks=c(seq.int(0,20, by = 2))) +
-  guides(color=guide_legend(override.aes=list(fill=c(pal[3], pal[1]))))+
-  theme_bw()
-
-
-plt <- pp + averaged_theme + guides(shape = guide_legend(order = 1)) + theme(legend.margin=margin(0,0,0,0), legend.box = "horizontal", legend.key.size = unit(0.4, "cm"), axis.text.x = element_text(size = 16), legend.position = c(0.8, 0.915)) 
-pp + html_theme + guides(shape = guide_legend(order = 1)) + theme(legend.margin=margin(0,0,0,0), legend.box = "horizontal", legend.key.size = unit(0.4, "cm"), axis.text.x = element_text(size = 16), legend.position = c(0.8, 0.915)) 
+# 
+# # OVERTIME
+# HED.t <- summarySEwithin(HED,
+#                          measurevar = "perceived_liking",
+#                          withinvars = c("trialxcondition","condition"),
+#                          idvar = "id")
+# 
+# HED.tg <- summarySEwithin(HED,
+#                           measurevar = "perceived_liking",
+#                           withinvars = c("trialxcondition","condition"),
+#                           betweenvars = 'intervention',
+#                           idvar = "id")
+# 
+# 
+# # plot 
+# pp <- ggplot(HED.t, aes(x = as.numeric(trialxcondition), y = perceived_liking,
+#                         color =condition, fill = condition)) +
+#   geom_point(data = HED.tg, aes(shape=group), alpha = 0.5) +
+#   geom_point(data = HED.t) +
+#   geom_line(alpha = .7, size = 1) +
+#   geom_ribbon(aes(ymax = perceived_liking + se, ymin = perceived_liking - se),  alpha=0.4) + 
+#   ylab('Perceived liking')+
+#   xlab('Trial') +
+#   scale_shape_manual(name="Group", labels=c("Lean", "Obese"), values = c(1, 2)) +
+#   scale_color_manual(labels = c('Pleasant', 'Neutral'), name = "",
+#                      values = c( "1" =pal[3], '-1' =pal[1])) +
+#   scale_fill_manual(labels = c('Pleasant', 'Neutral'), name = "",
+#                     values = c( "1" =pal[3], '-1'=pal[1])) +
+#   scale_y_continuous(expand = c(0, 0),  limits = c(40,100),  breaks=c(seq.int(50,100, by = 10))) +
+#   scale_x_continuous(expand = c(0, 0),  limits = c(-0.09,20.09),  breaks=c(seq.int(0,20, by = 2))) +
+#   guides(color=guide_legend(override.aes=list(fill=c(pal[3], pal[1]))))+
+#   theme_bw()
+# 
+# 
+# plt <- pp + averaged_theme + guides(shape = guide_legend(order = 1)) + theme(legend.margin=margin(0,0,0,0), legend.box = "horizontal", legend.key.size = unit(0.4, "cm"), axis.text.x = element_text(size = 16), legend.position = c(0.8, 0.915)) 
+# pp + html_theme + guides(shape = guide_legend(order = 1)) + theme(legend.margin=margin(0,0,0,0), legend.box = "horizontal", legend.key.size = unit(0.4, "cm"), axis.text.x = element_text(size = 16), legend.position = c(0.8, 0.915)) 
 
 ```
 ```{r HED_time_saveFIG, echo=FALSE, include = FALSE, warning=FALSE}
-cairo_pdf('figures/Figure_HED_time.pdf')
-print(plt)
-dev.off()
+# cairo_pdf('figures/Figure_HED_time.pdf')
+# print(plt)
+# dev.off()
 ```
 
 

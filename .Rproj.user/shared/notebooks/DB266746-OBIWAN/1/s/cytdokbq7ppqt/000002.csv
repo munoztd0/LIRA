@@ -1,2 +1,0 @@
-"0","table %>% kbl(caption ="""") %>%"
-"0","  kable_styling(latex_options = ""HOLD_position"", position = ""center"", full_width = F) %>%  row_spec(0,bold=T,align='c')"

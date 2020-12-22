@@ -95,6 +95,7 @@ HED.means = na.omit(HED.means); # remove dropout participants
 Empty = subset(HED.means, condition == "Empty"); Milkshake = subset(HED.means, condition == "MilkShake"); diff = Empty;
 diff$int = Milkshake$intensity - Empty$intensity; diff$fam = Milkshake$familiarity - Empty$familiarity;
 HED.means = merge(x = HED.means, y = diff[ , c("int", "fam", 'id')], by = "id", all.x=TRUE)
+HED.means = HED.means %>% group_by %>% mutate_at(c("int", "fam"), scale)
 
 # create baseline diff
 diff$diff_base = Milkshake$baseline_lik - Empty$baseline_lik
@@ -121,8 +122,8 @@ PAV.means$BMI1 = PAV.means$BMI_t1 # keep it unstandadized for later
 dflist <- lapply(mget(tables),function(x) x %>% group_by %>% mutate_at(c("thirsty", "hungry", "age", "diff_BMIz", "BMI_t1", "diff_base"), scale))
 list2env(dflist, envir=.GlobalEnv)
 
-#imput mean (0 since its mean centered) for the two participant that have missing covariate (MAR) data so we can still use them in ANCOVA (this happens only for thirsty and hungry) in PAV 232 // 231 & 239 in INST
-tables <- c("PAV.means", "INST.means")
+#imput mean (0 since its mean centered) for the two participant that have missing covariate (MAR) data so we can still use them in ANCOVA (this happens only for thirsty and hungry) in PAV 232 // 231 & 239 in INST // 229 in PIT
+tables <- c("PAV.means", "INST.means", "PIT.means")
 dflist <- lapply(mget(tables),function(x) imput(x))
 list2env(dflist, envir=.GlobalEnv)
 

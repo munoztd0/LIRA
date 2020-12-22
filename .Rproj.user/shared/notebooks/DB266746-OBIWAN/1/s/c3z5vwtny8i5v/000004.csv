@@ -1,5 +1,0 @@
-"0",""
-"0","tmp =tables2[16:17,1:2]"
-"0","names(tmp) <- NULL"
-"0","tmp %>% kbl() %>%"
-"0","  kable_styling(latex_options = ""HOLD_position"", position = ""center"", full_width = F) "

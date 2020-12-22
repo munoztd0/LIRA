@@ -1,7 +1,0 @@
-"0",""
-"0","GENDER = ddply(df, .(id, intervention), summarise, gender=mean(as.numeric(gender)))  %>%"
-"0","  group_by(gender, intervention) %>%"
-"0","  tally(); GENDER$gender = as.factor(revalue(as.factor(GENDER$gender), c(""1""=""Men"", ""2""=""Women""))); "
-"0","  GENDER %>% kbl(caption =""GENDER"") %>%"
-"0","  kable_styling(latex_options = ""HOLD_position"", position = ""center"", full_width = F) %>%"
-"0","  row_spec(0,bold=T,align='c')"
