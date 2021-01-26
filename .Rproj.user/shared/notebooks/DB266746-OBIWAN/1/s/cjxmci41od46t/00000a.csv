@@ -111,6 +111,11 @@
 "0","list2env(dflist, envir=.GlobalEnv)"
 "1","<environment: R_GlobalEnv>
 "
+"0","#merge with medic"
+"0","dflist <- lapply(mget(tables),function(x)merge(x, medic, by = ""id""))"
+"0","list2env(dflist, envir=.GlobalEnv)"
+"1","<environment: R_GlobalEnv>
+"
 "0","# creates diff BMI for each data"
 "0","dflist <- lapply(mget(tables),function(x) diffX(x))"
 "0","list2env(dflist, envir=.GlobalEnv)"
@@ -129,7 +134,7 @@
 "0","list2env(dflist, envir=.GlobalEnv)"
 "1","<environment: R_GlobalEnv>
 "
-"0","#imput mean (0 since its mean centered) for the two participant that have missing covariate (MAR) data so we can still use them in ANCOVA (this happens only for thirsty and hungry) in PAV 232 // 231 & 239 in INST // 229 in PIT"
+"0","#imput mean (0 since its mean centered) for the two participant that have missing covariate (MAR) data so we can still use them in ANCOVA (this happens only for thirsty and hungry) in PAV 232 // 231 & 239 in INST // 229 in PIT // "
 "0","tables <- c(""PAV.means"", ""INST.means"", ""PIT.means"")"
 "0","dflist <- lapply(mget(tables),function(x) imput(x))"
 "0","list2env(dflist, envir=.GlobalEnv)"

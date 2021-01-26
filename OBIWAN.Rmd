@@ -14,6 +14,7 @@ repro:
     PIT: data/PIT.csv
     info: data/info.csv
     intern: data/internal.csv
+    medic: data/medic.csv
   packages:
   - aaronpeikert/repro@adb5fa569
   - crsh/papaja@devel
@@ -66,6 +67,7 @@ automate_load_scripts()
 # load data
 info <- automate_load_data(info, read.csv, stringsAsFactors = T)
 intern <- automate_load_data(intern, read.csv, stringsAsFactors = T)
+medic <- automate_load_data(medic, read.csv, stringsAsFactors = T)
 PAV <- automate_load_data(PAV, read.csv, stringsAsFactors = T)
 INST <- automate_load_data(INST, read.csv, stringsAsFactors = T)
 PIT <- automate_load_data(PIT, read.csv, stringsAsFactors = T)
@@ -137,7 +139,7 @@ Latency = time to detect the target (ms)    &     condition = CS+ or CS- \
 diff_base = baseline latency differences (mean(CS-) -  mean(CS+)) 
 ```{r PAV_RT, echo=FALSE, include=FALSE, cache=TRUE}
 # -------------------------------------- RT
-model = aov_car(RT ~ condition*intervention + age + gender + thirsty + hungry + BMI_t1 +  diff_base + Error(id/condition), PAV.means, factorize = F, anova_table = list(correction = "GG", es = "none"))
+model = aov_car(RT ~ condition*intervention + age + gender + thirsty + hungry + BMI_t1 +  diff_base + Error(id/condition), PAV.means, factorize = F, anova_table = list(correction = "GG", es = "none")) #+ GLP1 + Fast_glu + insulin +
 table = nice(model); 
 
 ref_grid(model)  #triple check everything is centered at 0
@@ -430,7 +432,7 @@ Mobilized effort = Area under the curve of the force exerted exceeding the deliv
 ```{r PIT, echo=FALSE, include=FALSE, cache=TRUE}
 # -------------------------------------- STATS -----------------------------------------------
 
-model = aov_car(AUC ~ condition*intervention + age + gender + thirsty + hungry + BMI_t1  + diff_base + Error(id/condition), data= PIT.means, factorize = F, anova_table = list(correction = "GG", es = "none"))
+model = aov_car(AUC ~ condition*intervention + age + gender + thirsty + hungry + BMI_t1  + diff_base+ Error(id/condition), data= PIT.means, factorize = F, anova_table = list(correction = "GG", es = "none")) #+ GLP1 + Fast_glu + insulin 
 table = nice(model); 
 
 ref_grid(model)  #triple check everything is centered at 0
@@ -471,6 +473,43 @@ table %>% kbl(digits = 3) %>%
   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(0,bold=T,align='c')
 ```
 \
+
+```{r PIT_plot, echo=FALSE, include=FALSE, cache=TRUE}
+dfL <- summarySEwithin(PIT.means,
+                       measurevar = "AUC",
+                       withinvars = "condition",
+                       idvar = "id")
+
+dfL$cond <- ifelse(dfL$condition == "1", -0.25, 0.25)
+PIT.means$cond <- ifelse(PIT.means$condition == "1", -0.25, 0.25)
+PIT.means <- PIT.means %>% mutate(condjit = jitter(as.numeric(cond), 0.3),grouping = interaction(id, cond))
+
+
+# AUC
+pp <- ggplot(PIT.means, aes(x = cond, y = AUC,
+                            fill = condition, color = condition)) +
+  geom_line(aes(x = condjit, group = id, y = AUC), alpha = .3, size = 0.5, color = 'gray' ) +
+  geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(fill = condition, color = NA)) +
+  geom_point(aes(x = condjit, shape = intervention), alpha = .3) +
+  geom_crossbar(data = dfL, aes(y = AUC, ymin=AUC-se, ymax=AUC+se), width = 0.2 , alpha = 0.1)+
+  ylab('AUC')+
+  xlab('Condition')+
+  #scale_y_continuous(expand = c(0, 0), breaks = c(seq.int(0,30, by = 5)), limits = c(-0.05,30.5)) +
+  scale_x_continuous(labels=c("CS+", "CS-"),breaks = c(-.25,.25), limits = c(-.5,.5)) +
+  scale_fill_manual(values=c("1"= pal[6], "-1"=  pal[1]), guide = 'none') +
+  scale_color_manual(values=c("1"= pal[6], "-1"=  pal[1]), guide = 'none') +
+  scale_shape_manual(name="Intervention", labels=c("Placebo", "Liraglutide"), values = c(1, 2)) +
+  theme_bw()
+
+
+pp + html_theme +theme(legend.title  = element_text(size = 9),legend.text  = element_text(size = 9),legend.position=c(.92,.92))
+plt = pp + averaged_theme +theme(legend.title  = element_text(size = 10),legend.text  = element_text(size = 8),legend.position=c(.91,.91))
+```
+```{r PIT_save, echo=FALSE, include = FALSE, warning=FALSE}
+cairo_pdf('figures/Figure_PIT.pdf')
+print(plt)
+dev.off()
+```
 ```{r PIT_cont, echo=FALSE, include=FALSE, cache=TRUE}
 #p_cond = emmeans(mod, pairwise~ condition, side = ">"); p_cond #for condition (CS+ > CS- right sided)
 #CI_cond = confint(emmeans(mod, pairwise~ condition),level = 0.95, method = c("boot"), nsim = 5000); #CI_cond$contrasts #get CI condition
@@ -488,7 +527,7 @@ table %>% kbl(digits = 3) %>%
 
 ## Mobilized effort (AUC) difference (CS+ > CS-) by group
 ```{r PIT_plot, echo=FALSE, warning=FALSE, cache=TRUE}
-interactions::interact_plot(mod,pred = 'diff_base', modx = 'condition')
+#interactions::interact_plot(mod,pred = 'Fast_glu', modx = 'condition', mod2 = 'intervention')
 # create bin for each mini block
 #PIT.clean$trialxcondition    <- as.numeric(PIT.clean$trialxcondition)
 #PIT.clean  <- ddply(PIT.clean, "id", transform, bin = as.numeric(cut2(trialxcondition, g = 5)))
@@ -498,41 +537,48 @@ interactions::interact_plot(mod,pred = 'diff_base', modx = 'condition')
 #colnames(PIT.trial) <- c('id','trialxcondition','force')
 
 ### Plot between contrasts
-# 
-# df_est = emmeans(mod, pairwise~ condition|session) # estimate contrasts means by group from the model 
-# dfP = data.frame(df_est$contrasts); dfP$force = dfP$estimate #create a dataframe
-# CSp = subset(PIT.means, condition == '1'); CSm = subset(PIT.means, condition == '-1'); cont.means = CSp
-# cont.means$force = CSp$force - CSm$force; 
-# 
-# dfP$groupi <- ifelse(dfP$group == "1", -0.25, 0.25)
-# cont.means$groupi <- ifelse(cont.means$group == "1", -0.25, 0.25)
-# set.seed(666)
-# cont.means <- cont.means %>% mutate(groupjit = jitter(as.numeric(groupi), 0.25),
-#                                     grouping = interaction(id, groupi))
-# 
-# 
-# pp <- ggplot(cont.means, aes(x = groupi, y = force, 
-#                              fill = group, color = group)) +
-#   geom_hline(yintercept=0, linetype="dashed", size=0.4, alpha=0.8) +
-#   geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(fill = group, color = NA))+
-#   geom_point(aes(x = groupjit), alpha = .3,) +
-#   geom_crossbar(data = dfP, aes(y = force, ymin=force-SE, ymax=force+SE), width = 0.2 , alpha = 0.1)+
-#   #geom_errorbar(data = dfP,aes(group = group, ymin=force-SE, ymax=force+SE),position=position_nudge(x=0.15), size=0.5, width=0.1,  color = "black") + 
-#   ylab('\u0394 Mobilized effort (CS+ > CS-)')+
-#   xlab('')+
-#   scale_fill_manual(values=c("1" = pal[6],"0"=pal[1]), guide = 'none') +
-#   scale_color_manual(values=c("1" = pal[6],"0"=pal[1]), guide = 'none')  +
-#   scale_y_continuous(expand = c(0, 0), breaks = c(seq.int(-200,200, by = 50)), limits = c(-200.5,200.5)) +
-#   scale_x_continuous(labels=c("Obese", "Lean"),breaks = c(-.25,.25), limits = c(-.5,.5)) +
-#   theme_bw() 
-# 
-# plt = pp + averaged_theme 
-# pp + html_theme 
+
+df_est = emmeans(mod, pairwise~ condition|intervention) # estimate contrasts means by group from the model
+dfP$force = dfP$estimate #create a dataframe
+
+df_est2 = emmeans(mod, pairwise~ condition) # estimate contrasts means by group from the model
+dfP2 = data.frame(df_est2$contrasts); dfP2$force = dfP2$estimate #create a dataframe
+
+
+CSp = subset(PIT.means, condition == '1'); CSm = subset(PIT.means, condition == '-1'); cont.means = CSp
+cont.means$force = CSp$AUC - CSm$AUC;
+densityPlot(cont.means$force) #overall 0
+
+dfP$groupi <- ifelse(dfP$intervention == "1", -0.25, 0.25)
+cont.means$groupi <- ifelse(cont.means$intervention == "1", -0.25, 0.25)
+set.seed(666)
+cont.means <- cont.means %>% mutate(groupjit = jitter(as.numeric(groupi), 0.25),
+                                    grouping = interaction(id, groupi))
+
+
+  
+pp <- ggplot(cont.means, aes(x = groupi, y = force,
+                             fill = intervention, color = intervention)) +
+  geom_hline(yintercept=0, linetype="dashed", size=0.4, alpha=0.8) +
+  geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes( color = NA))+
+  geom_point(aes(x = groupjit, shape = intervention), alpha = .3,) +
+  geom_crossbar(data = dfP, aes(y = force, ymin=force-SE, ymax=force+SE), width = 0.2 , alpha = 0.1)+
+  #geom_errorbar(data = dfP,aes(group = intervention, ymin=force-SE, ymax=force+SE),position=position_nudge(x=0.15), size=0.5, width=0.1,  color = "black") +
+  ylab('\u0394 Mobilized effort (CS+ > CS-)')+
+  xlab('')+
+  scale_fill_manual(values=c("1" = pal[6],"0"=pal[1]), guide = 'none') +
+  scale_color_manual(values=c("1" = pal[6],"0"=pal[1]), guide = 'none')  +
+  #scale_y_continuous(expand = c(0, 0), breaks = c(seq.int(-200,200, by = 50)), limits = c(-200.5,200.5)) +
+  scale_x_continuous(labels=c("Treatment", "Placebo"),breaks = c(-.25,.25), limits = c(-.5,.5)) +
+  theme_bw()
+
+plt = pp + averaged_theme
+pp + html_theme
 ```
 ```{r PIT_saveFIG, echo=FALSE, include = FALSE, warning=FALSE}
-# cairo_pdf('figures/Figure_PIT_con.pdf')
-# print(plt)
-# dev.off()
+cairo_pdf('figures/Figure_PIT_con.pdf')
+print(plt)
+dev.off()
 ```
 
 ## Mobilized effort (AUC) over time
@@ -584,7 +630,7 @@ Pleasantness ratings = how pleasant is the liquid solution rated (0-100, with re
 ```{r HED, echo=FALSE, include=FALSE, cache=TRUE}
 # -------------------------------------- STATS ----------------------------------------------
 
-model = aov_car(liking ~ condition*intervention + age + gender + thirsty + hungry + BMI_t1  + diff_base + int + Error(id/condition), data= HED.means, factorize = F, anova_table = list(correction = "GG", es = "none"))
+model = aov_car(liking ~ condition*intervention + age + gender + thirsty + hungry + BMI_t1  + diff_base + int  + Error(id/condition), data= HED.means, factorize = F, anova_table = list(correction = "GG", es = "none")) #+ GLP1*intervention + Fast_glu*intervention + insulin*intervention
 table = nice(model); 
 
 ref_grid(model)  #triple check everything is centered at 0

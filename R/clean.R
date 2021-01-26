@@ -107,6 +107,10 @@ tables = c('PAV.means', 'INST.means', 'PIT.means', 'HED.means')
 dflist <- lapply(mget(tables),function(x)merge(x, info, by = "id"))
 list2env(dflist, envir=.GlobalEnv)
 
+#merge with medic
+dflist <- lapply(mget(tables),function(x)merge(x, medic, by = "id"))
+list2env(dflist, envir=.GlobalEnv)
+
 # creates diff BMI for each data
 dflist <- lapply(mget(tables),function(x) diffX(x))
 list2env(dflist, envir=.GlobalEnv)
@@ -122,7 +126,7 @@ PAV.means$BMI1 = PAV.means$BMI_t1 # keep it unstandadized for later
 dflist <- lapply(mget(tables),function(x) x %>% group_by %>% mutate_at(c("thirsty", "hungry", "age", "diff_BMIz", "BMI_t1", "diff_base"), scale))
 list2env(dflist, envir=.GlobalEnv)
 
-#imput mean (0 since its mean centered) for the two participant that have missing covariate (MAR) data so we can still use them in ANCOVA (this happens only for thirsty and hungry) in PAV 232 // 231 & 239 in INST // 229 in PIT
+#imput mean (0 since its mean centered) for the two participant that have missing covariate (MAR) data so we can still use them in ANCOVA (this happens only for thirsty and hungry) in PAV 232 // 231 & 239 in INST // 229 in PIT // 
 tables <- c("PAV.means", "INST.means", "PIT.means")
 dflist <- lapply(mget(tables),function(x) imput(x))
 list2env(dflist, envir=.GlobalEnv)
