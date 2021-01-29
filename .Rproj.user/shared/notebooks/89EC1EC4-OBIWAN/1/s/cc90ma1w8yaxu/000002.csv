@@ -1,7 +1,0 @@
-"0","options(scipen = 666, warn=-1, contrasts=c(""contr.sum"",""contr.poly""), mc.cores = parallel::detectCores()) #remove scientific notation # remove warnings #set contrasts to sum !"
-"0","set.seed(666) #set random seed"
-"0","control = lmerControl(optimizer ='optimx', optCtrl=list(method='nlminb')) #set ""better"" lmer optimizer #nolimit # yoloptimizer"
-"0","emm_options(pbkrtest.limit = 5000) #increase repetitions limit"
-"0","cl <- parallel::detectCores() #to mulithread"
-"0","source('R/plots.R', echo=F)# plot specification"
-"0","source('R/utils.R', echo=F)# useful functions"

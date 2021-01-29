@@ -1,6 +1,0 @@
-"0","tables <- list.clean(readHTMLTable(""tmp/temp1.html""), fun = is.null, recursive = FALSE)"
-"0","tables2 = tables[[1]] %>% janitor::row_to_names(row_number = 1)"
-"0","tables2 <- as.matrix(tables2) %>% as_tibble()"
-"0","tables2[is.na(tables2)] <- """""
-"0","tables2[1:11,1:4] %>% kbl(caption =""Reaction Times"" ) %>%"
-"0","  kable_styling(latex_options = ""HOLD_position"", position = ""center"", full_width = F) %>%  row_spec(0,bold=T,align='c')"

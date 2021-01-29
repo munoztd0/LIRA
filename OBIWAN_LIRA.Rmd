@@ -1,0 +1,383 @@
+---
+title: "OBIWAN BEHAVIORAL ANALYSIS"
+author: "David Munoz Tord"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  pdf_document:
+    dev: cairo_pdf
+  html_document: default
+repro:
+  data:
+    HED: data/HEDONIC.csv
+    INST: data/INST.csv
+    PAV: data/PAV.csv
+    PIT: data/PIT.csv
+    info: data/info.csv
+    intern: data/internal.csv
+    medic: data/medic.csv
+  packages:
+  - aaronpeikert/repro@adb5fa569
+  - crsh/papaja@devel
+  - tinylabels
+  - apaTables
+  - MBESS
+  - afex
+  - car
+  - ggplot2
+  - plyr
+  - dplyr
+  - tidyr
+  - reshape
+  - Hmisc
+  - Rmisc
+  - ggpubr
+  - ez
+  - gridExtra
+  - plotrix
+  - parallel
+  - emmeans
+  - BayesFactor
+  - effectsize
+  - devtools
+  - misty
+  - bayestestR
+  - lspline
+  - kableExtra
+  - sjPlot
+  - knitr
+  - XML
+  - rlist
+  - janitor
+  - optimx
+  scripts: R/clean.R
+  apt:
+    - octave
+    - gnuplot
+    - libgsl0-dev
+---
+
+```{r setup, echo=FALSE, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warnings=FALSE)
+
+library(repro)
+# load packages from yaml header
+automate_load_packages()
+# include external scripts
+automate_load_scripts()
+# load data
+info <- automate_load_data(info, read.csv, stringsAsFactors = T)
+intern <- automate_load_data(intern, read.csv, stringsAsFactors = T)
+medic <- automate_load_data(medic, read.csv, stringsAsFactors = T)
+PAV <- automate_load_data(PAV, read.csv, stringsAsFactors = T)
+INST <- automate_load_data(INST, read.csv, stringsAsFactors = T)
+PIT <- automate_load_data(PIT, read.csv, stringsAsFactors = T)
+HED <- automate_load_data(HED, read.csv, stringsAsFactors = T)
+```
+
+## Setup
+
+This file was automatically created via `repro::automate()`
+<!-- May I suggest running `repro::automate()`? This will create a `Dockerfile` & `Makefile` based on every RMarkdown in this folder and the special yamls in them. -->
+<!-- add ENV DEBIAN_FRONTEND=noninteractive -->
+<!-- If you are unsure weather or not you have `git` `make` & `docker`. -->
+
+```{r check, eval=TRUE}
+# check_git()
+# check_make()
+# check_docker()
+```
+
+```{r options, echo=FALSE, include=FALSE}
+options(scipen = 666, warn=-1, contrasts=c("contr.sum","contr.poly"), mc.cores = parallel::detectCores()) #remove scientific notation # remove warnings #set contrasts to sum !
+set.seed(666) #set random seed
+control = lmerControl(optimizer ='optimx', optCtrl=list(method='nlminb')) #set "better" lmer optimizer #nolimit # yoloptimizer
+emm_options(pbkrtest.limit = 5000) #increase repetitions limit
+cl <- parallel::detectCores() #to mulithread
+source('R/plots.R', echo=F)# plot specification
+source('R/utils.R', echo=F)# useful functions
+```
+
+```{r clean, echo=FALSE, include=FALSE}
+# this chunk runs R/clean.R (listed in the YAML)
+```
+
+## Demographics
+### Summary statistics:
+```{r demographgics}
+
+AGE = ddply(df,~intervention,summarise,mean=mean(ageF),sd=sd(ageF), min = min(ageF), max = max(ageF));
+AGE %>%
+  kbl(caption ="AGE", digits = 2) %>%
+  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%
+  row_spec(0,bold=T,align='c')
+
+BMI = ddply(df,~intervention,summarise,mean=mean(bmi1),sd=sd(bmi1), min = min(bmi1), max = max(bmi1)); 
+BMI %>%
+  kbl(caption ="BMI", digits = 2) %>%
+  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%
+  row_spec(0,bold=T,align='c')
+
+GENDER = ddply(df, .(id, intervention), summarise, gender=mean(as.numeric(gender)))  %>%
+  group_by(gender, intervention) %>%
+  tally(); GENDER$gender = as.factor(revalue(as.factor(GENDER$gender), c("1"="Men", "2"="Women"))); 
+  GENDER %>% kbl(caption ="GENDER") %>%
+  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%
+  row_spec(0,bold=T,align='c')
+
+N_group = ddply(df, .(id, intervention), summarise, group=mean(as.numeric(intervention)))  %>%
+  group_by(intervention) %>% tally();
+N_group %>%
+  kbl(caption ="Group") %>%
+  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%
+  row_spec(0,bold=T,align='c')
+```
+# Description
+
+# Weight Loss
+```{r weigth_loss, echo=FALSE, include=FALSE, cache=TRUE}
+formula_Zoltan = 'bmi_dif ~ intervention + gender + age + BMI_t1 +OEA+ PEA+  X2.AG + AEA + Leptin + Resistin+ adiponectin + reelin + glucagon+ Ghrelin + obestatin + GLP1 + insulin + Fast_glu +  Error(id)'
+actual_formula = 'bmi_dif ~ intervention + gender + age +  Error(id)'
+
+mdl.weight = aov_car(as.formula(formula_Zoltan), data = df, factorize = FALSE,  anova_table = list(correction = "GG", es = "none"))
+res = summary(mdl.weight); ref_grid(mdl.weight)
+
+PES.weight = pes_ci(as.formula(actual_formula), data = df, conf.level = .90, factorize = FALSE) ; 
+
+```
+```{r}
+nice(res) %>% kbl() %>%
+  kable_styling(latex_options = "striped", position = "left", full_width = F) 
+print('PES: intervention: Overall lower weight loss for Placebo')
+PES.weight[1,]
+```
+## Weight Loss X Intervention
+```{r Weight_Loss, echo=FALSE, warning=FALSE, cache=TRUE}
+dfR <- summarySE(df, measurevar = "bmi_dif",
+                       groupvars = "intervention")
+
+dfR$cond <- ifelse(dfR$intervention == "Liraglutide", -0.25, 0.25)
+df$cond <- ifelse(df$intervention == "Liraglutide", -0.25, 0.25)
+df <- df %>% mutate(condjit = jitter(as.numeric(cond), 0.3),
+                                  grouping = interaction(id, cond))
+
+pp <- ggplot(df, aes(x = cond, y = bmi_dif, 
+                            fill = intervention, color = intervention)) +
+  geom_hline(yintercept=0, linetype="dashed", size=0.4, alpha=0.8) +
+  geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(fill = intervention, color = NA))+
+  geom_point(aes(x = condjit), alpha = .3,) +
+  geom_crossbar(data = dfR, aes(y = bmi_dif, ymin=bmi_dif-ci, ymax=bmi_dif+ci), width = 0.2 , alpha = 0.1)+
+  ylab('\u0394 BMI (Weight loss)')+xlab('')+
+  scale_y_continuous(expand = c(0, 0), breaks = c(seq.int(-7.5,2.5, by = 2.5)), limits = c(-7.5,2.5)) +
+  scale_x_continuous(labels=c("Liraglutide", "Placebo"),breaks = c(-.25,.25), limits = c(-.5,.5)) +
+  scale_fill_manual(values=c("Liraglutide"= pal[6], "Placebo"=  pal[1]), guide = 'none') +
+  scale_color_manual(values=c("Liraglutide"= pal[6], "Placebo"=  pal[1]), guide = 'none') +
+  theme_bw() 
+
+plt = pp + averaged_theme 
+pp + html_theme 
+```
+```{r weight_saveFIG, include=FALSE}
+cairo_pdf('figures/Figure_WeightLoss_Lira.pdf')
+print(plt)
+dev.off()
+```
+
+# Pavlvovian Conditioning Task (Analysis: Latency)
+Latency = time to detect the target (ms) &  condition = CS+ or CS- \
+```{r PAV_RT, echo=FALSE, include=FALSE, cache=TRUE}
+# -------------------------------------- RT
+measurevar = "RT"
+formula = "condition*intervention*session"
+COVA = "+ age + gender + BMI_t1  + thirsty  + hungry +"
+random = " (condition*session|id) + (1|trialxcondition)"
+
+#method LRT
+model = mixed(as.formula(paste(measurevar, paste (formula, COVA, random), sep="~")), data = PAV, method = "LRT", control = control, REML = FALSE); model
+
+table = nice(model);  ref_grid(model)  #triple check everything is centered at 0
+
+#calculate exclusion BF01 for each effect
+test = extractBF(generalTestBF(as.formula(paste(measurevar, paste (formula, COVA, 'id'), sep="~")), data= PAV.means, whichRandom = 'id', neverExclude =  'id', whichModels ="top")); BF = 1/test[1] #switch to BF10 inclusion)); BF = 1/test[1] #switch to BF10 inclusion
+table$BF10 = rev(BF$bf) # reorder to match lmer model
+
+mod =  lmer(as.formula(paste(measurevar, paste (formula, COVA, random), sep="~")), data = PAV, control = control, REML = FALSE)
+tab_model(mod, show.p = F,show.intercept = F, show.se = T, title ="", show.re.var = F, digits = 2, dv.labels = "Latency", emph.p = TRUE, file = "tmp/temp1.html")
+```
+\
+```{r PAV_RT_mod}
+tables <- list.clean(readHTMLTable("tmp/temp1.html"), fun = is.null, recursive = FALSE)
+tables2 = tables[[1]] %>% janitor::row_to_names(row_number = 1)
+
+tables2 <- as.matrix(tables2) %>% as_tibble()
+tables2[is.na(tables2)] <- ""
+tables2[1:length(table$Effect),1:4] %>% kbl(caption ="Latency (ms)", ) %>%
+  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(0,bold=T,align='c')
+tmp = tables2[(length(table$Effect)+1):(length(table$Effect)+5),1:2]
+names(tmp) <- NULL
+tmp %>% kbl(digits = 2) %>%
+  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) 
+```
+\
+```{r PAV_RT_res}
+table %>% kbl(digits = 3) %>%
+  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(0,bold=T,align='c')
+print('Condition: Overall lower latency for CS+')
+```
+\
+```{r PAV_RT_cont, echo=FALSE, include=FALSE, cache=TRUE}
+#Estimated contrast mean and 95% CI\ (one sided test  side = "<")
+#p_cond = emmeans(mod, pairwise~ condition, side = "<"); p_cond #for condition (CS+ < CS- left sided!)
+#CI_cond = confint(emmeans(mod, pairwise~ condition),level = 0.95, method = c("boot"), nsim = 5000); 
+#tab =as_tibble(CI_cond$contrasts); tab$contrast = "CS+ > CS-"
+
+#tab %>% kbl() %>%
+  #kable_styling(latex_options = "striped", position = "left", full_width = F) 
+```
+## Latency by condition
+```{r PAV_RT_plot, echo=FALSE, warning=FALSE, cache=TRUE}
+# RT
+labels <- c("0" = "Pre", "1" = "Post")
+
+dfR <- summarySEwithin(PAV.means,
+                       measurevar = "RT",
+                       withinvars = c("condition","session"), 
+                       idvar = "id")
+
+dfR$cond <- ifelse(dfR$condition == "1", -0.25, 0.25)
+PAV.means$cond <- ifelse(PAV.means$condition == "1", -0.25, 0.25)
+PAV.means <- PAV.means %>% mutate(condjit = jitter(as.numeric(cond), 0.3),
+                                  grouping = interaction(id, cond))
+
+pp <- ggplot(PAV.means, aes(x = cond, y = RT, 
+                            fill = condition, color = condition)) +
+  geom_line(aes(x = condjit, group = id, y = RT), alpha = .3, size = 0.5, color = 'gray') +
+  geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(fill = condition, color = NA))+
+  geom_point(aes(x = condjit, shape = intervention), alpha = .3,) +
+  geom_crossbar(data = dfR, aes(y = RT, ymin=RT-se, ymax=RT+se), width = 0.2 , alpha = 0.1)+
+  ylab('Latency (ms)')+
+  xlab('Conditioned stimulus')+
+  scale_y_continuous(expand = c(0, 0), breaks = c(seq.int(0,1200, by = 200)), limits = c(-1,1200)) +
+  scale_x_continuous(labels=c("CS+", "CS-"),breaks = c(-.25,.25), limits = c(-.5,.5)) +
+  scale_fill_manual(values=c("1"= pal[2], "-1"=  pal[1]), guide = 'none') +
+  scale_color_manual(values=c("1"= pal[2], "-1"=  pal[1]), guide = 'none') +
+  scale_shape_manual(name="Intervention", labels=c("Placebo", "Liraglutide"), values = c(1, 2)) +
+  theme_bw() + facet_wrap(~session, labeller=labeller(session = labels))
+
+plt = pp + averaged_theme 
+pp + html_theme 
+```
+```{r PAV_RT_saveFIG, include=FALSE}
+cairo_pdf('figures/Figure_PavlovianRT_Lira.pdf')
+print(plt)
+dev.off()
+```
+## Analysis: Pleasantness Ratings (Pavlovian Cue)
+
+Ratings = how pleasant is the clue (0-100, no repetitions)   &   condition = CS+ or CS-
+```{r PAV_Lik, cache=TRUE, include=FALSE, message=FALSE}
+# -------------------------------------- Liking
+measurevar = "liking"
+formula = "condition*intervention*session"
+COVA = "+ age + gender+ BMI_t1 +"
+random = "Error(id/session*condition)"
+
+model = aov_car(as.formula(paste(measurevar, paste (formula, COVA, random), sep="~")), data= PAV.means, factorize = F, anova_table = list(correction = "GG", es = "none"))
+table = nice(model);  ref_grid(model)  #triple check everything is centered at 0
+
+#calculate Partial eta-squared and its 90 % CI for each effect
+pes_CI = pes_ci(as.formula(paste(measurevar, paste (formula, COVA, random), sep="~")), PAV.means); 
+table$`PES` = round(pes_CI[,1],3)
+
+table = table[c(10,1,5,2,3,4,5,11,15,6,16),]
+
+#calculate exclusion BF01 for each effect
+# test = extractBF(generalTestBF(as.formula(paste(measurevar, paste (formula, COVA, 'id'), sep="~")), data= PAV.means, whichRandom = 'id', neverExclude =  'id', whichModels ="top")); BF = 1/test[1] #switch to BF10 inclusion)); BF = 1/test[1] #switch to BF10 inclusion
+# table$BF10 = rev(BF$bf) # reorder to match lmer model
+# 
+# tab_model(mod, show.p = F,show.intercept = F, show.se = T, title ="", show.re.var = F, digits = 2, dv.labels = "Pleasantness Ratings", emph.p = TRUE, file = "tmp/temp2.html")
+```
+```{r}
+table %>% kbl() %>%
+  kable_styling(latex_options = "striped", position = "left", full_width = F) 
+```
+## Pleasantness Ratings by condition (Pavlvovian Cue)
+```{r PAV_LIK_plot, echo=FALSE, warning=FALSE, cache=TRUE}
+
+dfL <- summarySEwithin(PAV.means,
+                       measurevar = "liking",
+                       withinvars = c("condition", "session"), 
+                       idvar = "id")
+
+dfL$cond <- ifelse(dfL$condition == "1", -0.25, 0.25)
+
+# Liking
+pp <- ggplot(PAV.means, aes(x = cond, y = liking, 
+                            fill = condition, color = condition)) +
+    geom_hline(yintercept=50, linetype="dashed", size=0.4, alpha=0.8) +
+  geom_line(aes(x = condjit, group = id, y = liking), alpha = .3, size = 0.5, color = 'gray' ) +
+  geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(fill = condition, color = NA)) +
+  geom_point(aes(x = condjit, shape = intervention), alpha = .3) +
+  geom_crossbar(data = dfL, aes(y = liking, ymin=liking-se, ymax=liking+se), width = 0.2 , alpha = 0.1)+
+  ylab('Liking Ratings')+
+  xlab('Conditioned stimulus')+
+  scale_y_continuous(expand = c(0, 0), breaks = c(seq.int(0,100, by = 25)), limits = c(-0.05,100.5)) +
+  scale_x_continuous(labels=c("CS+", "CS-"),breaks = c(-.25,.25), limits = c(-.5,.5)) +
+  scale_fill_manual(values=c("1"= pal[2], "-1"=  pal[1]), guide = 'none') +
+  scale_color_manual(values=c("1"= pal[2], "-1"=  pal[1]), guide = 'none') +
+  scale_shape_manual(name="Intervention", labels=c("Placebo", "Liraglutide"), values = c(1, 2)) +
+  theme_bw()+ facet_wrap(~session, labeller=labeller(session = labels))
+
+
+pp + html_theme 
+plt = pp + averaged_theme 
+```
+```{r PAV_lik_saveFIG, include=FALSE}
+cairo_pdf('figures/Figure_PavlovianLiking_Lira.pdf')
+print(plt)
+dev.off()
+```
+
+# Instrumental Conditioning Task (Analysis)
+grips = number of times participant exceeded the force threshold to acquire the reward (Milkshake)
+spline = first 5 trials (0), last 20 trials (1)
+
+```{r INST, cache=TRUE,  include=FALSE, message=FALSE, warning=FALSE}
+measurevar = "grips"
+formula = "spline*intervention*session"
+COVA = "+ age + gender + BMI_t1  + thirsty  + hungry +"
+random = '(spline*session|id) + (1|trial)'
+
+
+## PIECEWISE REGRESSION WITH SPLINES
+model = mixed(as.formula(paste(measurevar, paste(formula, COVA, random), sep="~")), data = INST, method = "LRT", control = control, REML = FALSE); model 
+
+table = nice(model);  ref_grid(model)  #triple check everything is centered at 0
+
+#calculate exclusion BF01 for each effect
+ 
+test = extractBF(generalTestBF(as.formula(paste(measurevar, paste (formula, COVA, 'id'), sep="~")), data= INST.means, whichRandom = c('id'), neverExclude =  'id', whichModels ="top")); BF = 1/test[1] #switch to BF10 inclusion)); BF = 1/test[1] #switch to BF10 inclusion
+table$BF10 = rev(BF$bf) # reorder to match lmer model
+
+mod <- lmer(as.formula(paste(measurevar, paste(formula, COVA, random), sep="~")),data=INST, control = control, REML = FALSE)
+tab_model(mod, show.p = F,show.intercept = F, show.se = T, title ="", show.re.var = F, digits = 2, dv.labels = "Grips", emph.p = TRUE, file = "tmp/temp3.html")
+```
+\
+```{r INST_mod}
+tables <- list.clean(readHTMLTable("tmp/temp3.html"), fun = is.null, recursive = FALSE)
+tables2 = tables[[1]] %>% janitor::row_to_names(row_number = 1)
+
+tables2 <- as.matrix(tables2) %>% as_tibble()
+tables2[is.na(tables2)] <- ""
+tables2[1:length(table$Effect),1:4] %>% kbl(caption ="Grips", ) %>%
+  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(0,bold=T,align='c')
+tmp = tables2[(length(table$Effect)+1):(length(table$Effect)+5),1:2]
+names(tmp) <- NULL
+tmp %>% kbl(digits = 2) %>%
+  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) 
+```
+\
+```{r INST_res}
+table %>% kbl(digits = 3) %>%
+  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(0,bold=T,align='c')
+#print('Condition: Overall lower latency for CS+')
+```

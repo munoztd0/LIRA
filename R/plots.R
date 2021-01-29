@@ -4,7 +4,7 @@
 averaged_theme <- theme_bw(base_size = 32, base_family = "Helvetica")+
   theme(strip.text.x = element_text(size = 32, face = "bold"),
         strip.background = element_rect(color="white", fill="white", linetype="solid"),
-        legend.position=c(.9,.9),
+        legend.position=c(.94,.94),
         legend.title  = element_text(size = 12),
         legend.text  = element_text(size = 10),
         legend.key.size = unit(0.2, "cm"),
@@ -20,7 +20,7 @@ averaged_theme <- theme_bw(base_size = 32, base_family = "Helvetica")+
 html_theme <- theme_bw(base_size = 24, base_family = "Helvetica")+
   theme(strip.text.x = element_text(size = 24, face = "bold"),
         strip.background = element_rect(color="white", fill="white", linetype="solid"),
-        legend.position=c(.9,.9),
+        legend.position=c(.94,.94),
         legend.title  = element_text(size = 12),
         legend.text  = element_text(size = 10),
         legend.key.size = unit(0.2, "cm"),

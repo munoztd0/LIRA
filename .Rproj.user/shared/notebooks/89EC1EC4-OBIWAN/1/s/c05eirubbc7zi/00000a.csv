@@ -1,7 +1,0 @@
-"0","df = PAV; df$group = as.factor(revalue(as.factor(df$group), c(""control""=""Lean"", ""obese""=""Obese"")));"
-"0","AGE = ddply(df,~group,summarise,mean=mean(age),sd=sd(age), min = min(age), max = max(age));"
-"2","Error: Problem with `summarise()` input `mean`.
-[31mx[39m error in evaluating the argument 'x' in selecting a method for function 'mean': object 'age' not found
-[34mℹ[39m Input `mean` is `mean(age)`.
-[90mRun `rlang::last_error()` to see where the error occurred.[39m
-"

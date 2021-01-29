@@ -1,0 +1,418 @@
+---
+title: "todo"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Number of Grips by learning phasis
+```{r INST_plot, echo=FALSE, warning=FALSE, cache=TRUE}
+dfL <- summarySEwithin(INST.means,
+                       measurevar = "grips",
+                       withinvars = "spline", 
+                       idvar = "id")
+
+dfL$cond <- ifelse(dfL$spline == "1", -0.25, 0.25)
+INST.means$cond <- ifelse(INST.means$spline == "1", -0.25, 0.25)
+INST.means <- INST.means %>% mutate(condjit = jitter(as.numeric(cond), 0.3),grouping = interaction(id, cond))
+
+
+# grips
+pp <- ggplot(INST.means, aes(x = cond, y = grips, 
+                            fill = spline, color = spline)) +
+  geom_line(aes(x = condjit, group = id, y = grips), alpha = .3, size = 0.5, color = 'gray' ) +
+  geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(fill = spline, color = NA)) +
+  geom_point(aes(x = condjit, shape = intervention), alpha = .3) +
+  geom_crossbar(data = dfL, aes(y = grips, ymin=grips-se, ymax=grips+se), width = 0.2 , alpha = 0.1)+
+  ylab('Number of grips')+
+  xlab('Learning phasis')+
+  scale_y_continuous(expand = c(0, 0), breaks = c(seq.int(0,30, by = 5)), limits = c(-0.05,30.5)) +
+  scale_x_continuous(labels=c("Early", "Late"),breaks = c(-.25,.25), limits = c(-.5,.5)) +
+  scale_fill_manual(values=c("1"= pal[4], "0"=  pal[1]), guide = 'none') +
+  scale_color_manual(values=c("1"= pal[4], "0"=  pal[1]), guide = 'none') +
+  scale_shape_manual(name="Intervention", labels=c("Placebo", "Liraglutide"), values = c(1, 2)) +
+  theme_bw()
+
+
+pp + html_theme +theme(legend.title  = element_text(size = 9),legend.text  = element_text(size = 9),legend.position=c(.92,.92))
+plt = pp + averaged_theme +theme(legend.title  = element_text(size = 10),legend.text  = element_text(size = 8),legend.position=c(.91,.91))
+```
+```{r INST_saveFIG, echo=FALSE, include = FALSE, warning=FALSE}
+cairo_pdf('figures/Figure_INST_trial_LIRA.pdf')
+print(plt)
+dev.off()
+```
+```{r INST_plot2, echo=FALSE, warning=FALSE, message=FALSE, cache=TRUE}
+## Number of Grips over time
+# dfTRIAL <- summarySEwithin(INST2, na.rm=TRUE,
+#                            measurevar = "grips",
+#                            withinvars = "trial",
+#                            idvar = "id")
+# 
+# 
+# dfTRIAL$trial       <- as.numeric(dfTRIAL$trial)
+# 
+# dfTRIALg <- summarySEwithin(INST2, na.rm=TRUE,
+#                            measurevar = "grips",
+#                            withinvars = "trial",
+#                            betweenvars = "intervention",
+#                            idvar = "id")
+# 
+# dfTRIALg$trial       <- as.numeric(dfTRIALg$trial)
+# 
+# dfTRIAL$x = dfTRIAL$trial; dfTRIAL$y = dfTRIAL$grips
+# splinelm <- lm(y ~ lspline(x, 5), data=dfTRIAL)
+# 
+# 
+# pp <- ggplot(dfTRIAL, aes(x =trial, y = grips)) +
+#   geom_point(data = dfTRIALg, aes(shape = intervention), alpha = 0.3, color = 'black') +
+#   geom_point(data = dfTRIAL, alpha = 0.5, color = pal[4], shape = 18) +
+#   #geom_line(color = pal[4]) +
+#   geom_smooth(method="lm", formula=formula(splinelm), color="tomato",fill = pal[4], size=0.7) + #addd this for lsplines
+#   #geom_ribbon(aes(ymin=grips-se, ymax=grips+se), fill = pal[4], alpha = 0.3)+
+#   ylab('Number of Grips')+
+#   xlab('Trial') +
+#   scale_y_continuous(expand = c(0, 0),  limits = c(10.5,15.05),  breaks=c(seq.int(11,15, by = 1))) +
+#   scale_x_continuous(expand = c(0, 0),  limits = c(0,15.1),  breaks=c(seq.int(1,15, by = 1))) +
+#   scale_shape_manual(name="Intervention", labels=c("Placebo", "Liraglutide"), values = c(1, 2, 18)) +
+#   theme_bw()
+# 
+# pp + html_theme + theme(legend.position=c(.9,.88), axis.text.x = element_text(size = 16))
+# plt = pp + averaged_theme + theme(legend.position=c(.9,.88), axis.text.x = element_text(size = 16))
+```
+
+
+# Pavlvovian-Instrumental Transfer (PIT) Task (Analysis)
+Formula = Mobilized effort ~ condition*intervention + age + gender + thirsty + hungry + BMI_t1  + diff_baseline + Error(id/condition)\
+Mobilized effort = Area under the curve of the force exerted exceeding the delivery threshold during Pavlvoian cue presentation
+```{r PIT, echo=FALSE, include=FALSE, cache=TRUE}
+# -------------------------------------- STATS -----------------------------------------------
+
+model = aov_car(AUC ~ condition*intervention + age + gender + thirsty + hungry + BMI_t1  + diff_base+ Error(id/condition), data= PIT.means, factorize = F, anova_table = list(correction = "GG", es = "none")) #+ GLP1 + Fast_glu + insulin 
+table = nice(model); 
+
+ref_grid(model)  #triple check everything is centered at 0
+
+#calculate Partial eta-squared and its 90 % CI for each effect
+pes_CI = pes_ci(AUC ~ condition*intervention + age + gender + thirsty + hungry + BMI_t1  + diff_base + Error(id/condition), PIT.means); 
+table$`PES` = round(pes_CI[,1],3)
+table$`Lower CI` = round(pes_CI[,2],3)
+table$`Upper CI` = round(pes_CI[,3],3)
+
+#calculate exclusion BF01 for each effect
+test = extractBF(generalTestBF(AUC ~ condition*intervention + condition*age + condition*gender + condition*thirsty + condition*hungry + condition*BMI_t1  + condition*diff_base + id, data= PIT.means, whichRandom = 'id', neverExclude =  'id', whichModels ="top")); BF = 1/test[1] #switch to BF10 inclusion)); BF = 1/test[1] #switch to BF10 inclusion
+table$BF10 = round(BF$bf[order(c(15,14,13,13,11,10,9,7,6,5,4,3,2,1,8))],2) # reorder
+#table$BF10[6] = formatC(BF$bf[11], format = "e", digits = 2)
+
+
+mod <- lm(AUC ~ condition*intervention + condition*age + condition*gender + condition*thirsty + condition*hungry + condition*BMI_t1  + condition*diff_base, data = PIT.means)
+
+tab_model(mod, show.p = F,show.intercept = F, show.se = T, title ="", show.re.var = F, digits = 2, dv.labels = "Mobilized effort (a.u.)", file = "tmp/temp4.html") #, pred.labels=c("CS+", "Lean", "Interaction (Lean:CS+)")
+```
+\
+```{r PIT_mod, echo=FALSE}
+tables <- list.clean(readHTMLTable("tmp/temp4.html"), fun = is.null, recursive = FALSE)
+tables2 = tables[[1]] %>% janitor::row_to_names(row_number = 1)
+tables2 <- as.matrix(tables2) %>% as_tibble()
+tables2[is.na(tables2)] <- ""
+tables2[1:15,1:4] %>% kbl(caption ="Mobilized effort (a.u.)" ) %>%
+  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F)  %>%  row_spec(0,bold=T,align='c')
+
+tmp =tables2[16:17,1:2]
+names(tmp) <- NULL
+tmp %>% kbl() %>%
+  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F)  
+```
+
+```{r PIT_res}
+table %>% kbl(digits = 3) %>%
+  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(0,bold=T,align='c')
+```
+\
+
+```{r PIT_plot, echo=FALSE, include=FALSE, cache=TRUE}
+dfL <- summarySEwithin(PIT.means,
+                       measurevar = "AUC",
+                       withinvars = "condition",
+                       idvar = "id")
+
+dfL$cond <- ifelse(dfL$condition == "1", -0.25, 0.25)
+PIT.means$cond <- ifelse(PIT.means$condition == "1", -0.25, 0.25)
+PIT.means <- PIT.means %>% mutate(condjit = jitter(as.numeric(cond), 0.3),grouping = interaction(id, cond))
+
+
+# AUC
+pp <- ggplot(PIT.means, aes(x = cond, y = AUC,
+                            fill = condition, color = condition)) +
+  geom_line(aes(x = condjit, group = id, y = AUC), alpha = .3, size = 0.5, color = 'gray' ) +
+  geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(fill = condition, color = NA)) +
+  geom_point(aes(x = condjit, shape = intervention), alpha = .3) +
+  geom_crossbar(data = dfL, aes(y = AUC, ymin=AUC-se, ymax=AUC+se), width = 0.2 , alpha = 0.1)+
+  ylab('AUC')+
+  xlab('Condition')+
+  #scale_y_continuous(expand = c(0, 0), breaks = c(seq.int(0,30, by = 5)), limits = c(-0.05,30.5)) +
+  scale_x_continuous(labels=c("CS+", "CS-"),breaks = c(-.25,.25), limits = c(-.5,.5)) +
+  scale_fill_manual(values=c("1"= pal[6], "-1"=  pal[1]), guide = 'none') +
+  scale_color_manual(values=c("1"= pal[6], "-1"=  pal[1]), guide = 'none') +
+  scale_shape_manual(name="Intervention", labels=c("Placebo", "Liraglutide"), values = c(1, 2)) +
+  theme_bw()
+
+
+pp + html_theme +theme(legend.title  = element_text(size = 9),legend.text  = element_text(size = 9),legend.position=c(.92,.92))
+plt = pp + averaged_theme +theme(legend.title  = element_text(size = 10),legend.text  = element_text(size = 8),legend.position=c(.91,.91))
+```
+```{r PIT_save, echo=FALSE, include = FALSE, warning=FALSE}
+cairo_pdf('figures/Figure_PIT.pdf')
+print(plt)
+dev.off()
+```
+```{r PIT_cont, echo=FALSE, include=FALSE, cache=TRUE}
+#p_cond = emmeans(mod, pairwise~ condition, side = ">"); p_cond #for condition (CS+ > CS- right sided)
+#CI_cond = confint(emmeans(mod, pairwise~ condition),level = 0.95, method = c("boot"), nsim = 5000); #CI_cond$contrasts #get CI condition
+
+# inter = emmeans(model, pairwise~ condition|group, adjust = "tukey", side = ">")  #for group X condition (adjusted but still right sided)
+# CI_inter = confint(emmeans(model, pairwise~ condition|group),level = 0.95,method = c("boot"),nsim = 5000) ##get CI inter
+# tmp = as_tibble(inter$contrasts); 
+# tab =as_tibble(CI_inter$contrasts); tab$contrast = "CS+ > CS-"; tab$group = c("Lean", "Obese"); tab$T = tmp$t.ratio; tab$p.value = tmp$p.value; 
+```
+\
+```{r PIT_cont_tab}
+# tab %>% kbl(caption = "Post-Hoc test CS+ > CS- by group (adjusted Tukey HSD)", digits = 3) %>%
+#   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(0,bold=T,align='c')
+```
+
+## Mobilized effort (AUC) difference (CS+ > CS-) by group
+```{r PIT_plot, echo=FALSE, warning=FALSE, cache=TRUE}
+#interactions::interact_plot(mod,pred = 'Fast_glu', modx = 'condition', mod2 = 'intervention')
+# create bin for each mini block
+#PIT.clean$trialxcondition    <- as.numeric(PIT.clean$trialxcondition)
+#PIT.clean  <- ddply(PIT.clean, "id", transform, bin = as.numeric(cut2(trialxcondition, g = 5)))
+
+
+#PIT.trial <- aggregate(PIT.s$AUC, by = list(PIT.s$id, PIT.s$trialxcondition), FUN='mean') # extract means
+#colnames(PIT.trial) <- c('id','trialxcondition','force')
+
+### Plot between contrasts
+
+df_est = emmeans(mod, pairwise~ condition|intervention) # estimate contrasts means by group from the model
+dfP$force = dfP$estimate #create a dataframe
+
+df_est2 = emmeans(mod, pairwise~ condition) # estimate contrasts means by group from the model
+dfP2 = data.frame(df_est2$contrasts); dfP2$force = dfP2$estimate #create a dataframe
+
+
+CSp = subset(PIT.means, condition == '1'); CSm = subset(PIT.means, condition == '-1'); cont.means = CSp
+cont.means$force = CSp$AUC - CSm$AUC;
+densityPlot(cont.means$force) #overall 0
+
+dfP$groupi <- ifelse(dfP$intervention == "1", -0.25, 0.25)
+cont.means$groupi <- ifelse(cont.means$intervention == "1", -0.25, 0.25)
+set.seed(666)
+cont.means <- cont.means %>% mutate(groupjit = jitter(as.numeric(groupi), 0.25),
+                                    grouping = interaction(id, groupi))
+
+
+  
+pp <- ggplot(cont.means, aes(x = groupi, y = force,
+                             fill = intervention, color = intervention)) +
+  geom_hline(yintercept=0, linetype="dashed", size=0.4, alpha=0.8) +
+  geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes( color = NA))+
+  geom_point(aes(x = groupjit, shape = intervention), alpha = .3,) +
+  geom_crossbar(data = dfP, aes(y = force, ymin=force-SE, ymax=force+SE), width = 0.2 , alpha = 0.1)+
+  #geom_errorbar(data = dfP,aes(group = intervention, ymin=force-SE, ymax=force+SE),position=position_nudge(x=0.15), size=0.5, width=0.1,  color = "black") +
+  ylab('\u0394 Mobilized effort (CS+ > CS-)')+
+  xlab('')+
+  scale_fill_manual(values=c("1" = pal[6],"0"=pal[1]), guide = 'none') +
+  scale_color_manual(values=c("1" = pal[6],"0"=pal[1]), guide = 'none')  +
+  #scale_y_continuous(expand = c(0, 0), breaks = c(seq.int(-200,200, by = 50)), limits = c(-200.5,200.5)) +
+  scale_x_continuous(labels=c("Treatment", "Placebo"),breaks = c(-.25,.25), limits = c(-.5,.5)) +
+  theme_bw()
+
+plt = pp + averaged_theme
+pp + html_theme
+```
+```{r PIT_saveFIG, echo=FALSE, include = FALSE, warning=FALSE}
+cairo_pdf('figures/Figure_PIT_con.pdf')
+print(plt)
+dev.off()
+```
+
+## Mobilized effort (AUC) over time
+```{r PIT_time, echo=FALSE, warning=FALSE, cache=TRUE}
+# PLOT OVERTIME
+
+# 
+# labels <- c("0" = "Placebo", "1" = "Liraglutide")
+# PIT.p <- summarySEwithin(PIT.clean,
+#                          measurevar = "AUC",
+#                          withinvars = c("trialxcondition","condition"),
+#                          betweenvars = "group",
+#                          idvar = "id")
+# 
+# PIT.p$trial <- as.numeric(PIT.p$trialxcondition)
+# PIT.p = select(PIT.p, c('trial', 'N' , 'AUC', 'sd', 'se', 'ci', 'condition', 'group'))
+# 
+# 
+# # plot 
+# pp <- ggplot(PIT.p, aes(x = as.numeric(trial), y = AUC,
+#                         color = condition, 
+#                         fill  = condition))+
+#   geom_line(alpha = .5, size = 1, show.legend = F) +
+#   geom_ribbon(aes(ymax = AUC + se, ymin = AUC - se),  alpha=0.4) + 
+#   geom_point() +
+#   ylab('Mobilized effort (a.u.)')+
+#   xlab('Trial')+
+#   scale_color_manual(labels = c('-1'= 'CS-', "1" = 'CS+'), name="", 
+#                      values = c("1"= pal[2], '-1'= pal[1])) +
+#   scale_fill_manual(labels = c('-1'= 'CS-', "1" = 'CS+'), name="", 
+#                     values = c("1"= pal[2], '-1'= pal[1])) +
+#   scale_y_continuous(expand = c(0, 0),  limits = c(50,200),  breaks=c(seq.int(50,200, by = 50))) +
+#   scale_x_continuous(expand = c(0, 0),  limits = c(0,15),  breaks=c(seq.int(1,15, by = 2))) +
+#   theme_bw() +
+#   facet_wrap(~group, labeller=labeller(group = labels))
+# 
+# 
+# pp + html_theme + theme(strip.background = element_rect(fill="white"), legend.key.size = unit(0.3, "cm"), axis.text.x = element_text(size = 16))
+# plt = pp + averaged_theme + theme(strip.background = element_rect(fill="white"), legend.key.size = unit(0.8, "cm"), axis.text.x = element_text(size = 16))
+```
+```{r PIT_time_saveFIG, echo=FALSE, include = FALSE, warning=FALSE}
+# cairo_pdf('figures/Figure_PIT_time.pdf')
+# print(plt)
+# dev.off()
+```
+# Hedonic Reactivity Test (Analysis)
+Formula = Pleasantness ratings ~ condition*intervention + age + gender + thirsty + hungry + BMI_t1  + diff_base + intensity + Error(id/condition)\
+Pleasantness ratings = how pleasant is the liquid solution rated (0-100, with repetitions)   &   condition = Milshake or Tasteless   &   intensity = difference on how intense the liquid solution were rated (mean(Milshake) - mean(Tasteless))
+```{r HED, echo=FALSE, include=FALSE, cache=TRUE}
+# -------------------------------------- STATS ----------------------------------------------
+
+model = aov_car(liking ~ condition*intervention + age + gender + thirsty + hungry + BMI_t1  + diff_base + int  + Error(id/condition), data= HED.means, factorize = F, anova_table = list(correction = "GG", es = "none")) #+ GLP1*intervention + Fast_glu*intervention + insulin*intervention
+table = nice(model); 
+
+ref_grid(model)  #triple check everything is centered at 0
+
+#calculate Partial eta-squared and its 90 % CI for each effect
+pes_CI = pes_ci(liking ~ condition*intervention + age + gender + thirsty + hungry + BMI_t1  + diff_base + int + Error(id/condition), data= HED.means); 
+table$`PES` = round(pes_CI[,1],3)
+table$`Lower CI` = round(pes_CI[,2],3)
+table$`Upper CI` = round(pes_CI[,3],3)
+
+#calculate exclusion BF01 for each effect
+test = extractBF(generalTestBF(liking ~ condition*intervention + condition*age + condition*gender + condition*thirsty + condition*hungry + condition*BMI_t1  + condition*diff_base + condition*int + id, data= HED.means, whichRandom = 'id', neverExclude =  'id', whichModels ="top")); BF = 1/test[1] #switch to BF10 inclusion)); BF = 1/test[1] #switch to BF10 inclusion
+table$BF10 = round(BF$bf[order(c(17, 16, 15, 14, 13, 12, 11, 10,  8,  7, 6,  5,  4,  3,  2, 1, 9))],2) # reorder
+table$BF10[c(9,16)] = formatC(table$BF10[c(9,16)], format = "e", digits = 2)
+
+mod <- lm(liking ~ condition*intervention + condition*age + condition*gender + condition*thirsty + condition*hungry + condition*BMI_t1  + condition*diff_base + condition*int, data=HED.means)
+
+tab_model(mod, show.p = F,show.intercept = F, show.se = T,  title ="", show.re.var = F, digits = 2, dv.labels = "Pleasantness Ratings", file = "tmp/temp5.html")
+```
+\
+```{r HED_mod, echo=FALSE, warning=FALSE}
+tables <- list.clean(readHTMLTable("tmp/temp5.html"), fun = is.null, recursive = FALSE)
+tables2 = tables[[1]] %>% janitor::row_to_names(row_number = 1)
+tables2 <- as.matrix(tables2) %>% as_tibble()
+tables2[is.na(tables2)] <- ""
+tables2[1:17,1:4] %>% kbl(caption ="Pleasantness ratings (taste)" ) %>%
+  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F)  %>%  row_spec(0,bold=T,align='c')
+
+tmp =tables2[18:19,1:2]
+names(tmp) <- NULL
+tmp %>% kbl() %>%
+  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F)  
+```
+
+```{r HED_res}
+table %>% kbl(digits = 3) %>%
+  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(0,bold=T,align='c')
+```
+
+## Pleasantness Ratings (Taste) by condition
+```{r HED_plot, echo=FALSE, warning=FALSE, cache=TRUE}
+
+# AVERAGED EFFECT
+dfH <- summarySEwithin(HED.means,
+                       measurevar = "liking",
+                       withinvars = "condition", 
+                       idvar = "id")
+
+dfH$cond <- ifelse(dfH$condition == "1", -0.25, 0.25)
+HED.means$cond <- ifelse(HED.means$condition == "1", -0.25, 0.25)
+set.seed(666)
+HED.means <- HED.means %>% mutate(condjit = jitter(as.numeric(cond), 0.3),
+                                  grouping = interaction(id, cond))
+
+
+pp <- ggplot(HED.means, aes(x = cond, y = liking, 
+                            fill = condition, color = condition)) +
+  geom_point(data = dfH, alpha = 0.5) +
+  geom_line(aes(x = condjit, group = id, y = liking), alpha = .3, size = 0.5, color = 'gray') +
+  geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(fill = condition, color = NA))+
+  geom_point(aes(x = condjit, shape = intervention), alpha = .3,) +
+  geom_crossbar(data = dfH, aes(y = liking, ymin=liking-se, ymax=liking+se), width = 0.2 , alpha = 0.1)+
+  ylab('Perceived liking') +
+  xlab('Taste') +
+  scale_y_continuous(expand = c(0, 0), breaks = c(seq.int(0,100, by = 20)), limits = c(-0.5,100.5)) +
+  scale_x_continuous(labels=c("Pleasant", "Neutral"),breaks = c(-.25,.25), limits = c(-.5,.5)) +
+  scale_fill_manual(values=c("1"= pal[3], "-1"=pal[1]), guide = 'none') +
+  scale_color_manual(values=c("1"=pal[3], "-1"=pal[1]), guide = 'none') +
+  scale_shape_manual(name="Intervention", labels=c("Placebo", "Liraglutide"), values = c(1, 2)) +
+  theme_bw()
+
+plt <- pp + averaged_theme
+pp + html_theme
+```
+```{r HED_saveFIG, echo=FALSE, include = FALSE, warning=FALSE}
+cairo_pdf('figures/Figure_HED_Lira.pdf')
+print(plt)
+dev.off()
+```
+## Pleasantness Ratings over time
+```{r HED_time, echo=FALSE, warning=FALSE, cache=TRUE}
+# 
+# # OVERTIME
+# HED.t <- summarySEwithin(HED,
+#                          measurevar = "perceived_liking",
+#                          withinvars = c("trialxcondition","condition"),
+#                          idvar = "id")
+# 
+# HED.tg <- summarySEwithin(HED,
+#                           measurevar = "perceived_liking",
+#                           withinvars = c("trialxcondition","condition"),
+#                           betweenvars = 'intervention',
+#                           idvar = "id")
+# 
+# 
+# # plot 
+# pp <- ggplot(HED.t, aes(x = as.numeric(trialxcondition), y = perceived_liking,
+#                         color =condition, fill = condition)) +
+#   geom_point(data = HED.tg, aes(shape=group), alpha = 0.5) +
+#   geom_point(data = HED.t) +
+#   geom_line(alpha = .7, size = 1) +
+#   geom_ribbon(aes(ymax = perceived_liking + se, ymin = perceived_liking - se),  alpha=0.4) + 
+#   ylab('Perceived liking')+
+#   xlab('Trial') +
+#   scale_shape_manual(name="Group", labels=c("Lean", "Obese"), values = c(1, 2)) +
+#   scale_color_manual(labels = c('Pleasant', 'Neutral'), name = "",
+#                      values = c( "1" =pal[3], '-1' =pal[1])) +
+#   scale_fill_manual(labels = c('Pleasant', 'Neutral'), name = "",
+#                     values = c( "1" =pal[3], '-1'=pal[1])) +
+#   scale_y_continuous(expand = c(0, 0),  limits = c(40,100),  breaks=c(seq.int(50,100, by = 10))) +
+#   scale_x_continuous(expand = c(0, 0),  limits = c(-0.09,20.09),  breaks=c(seq.int(0,20, by = 2))) +
+#   guides(color=guide_legend(override.aes=list(fill=c(pal[3], pal[1]))))+
+#   theme_bw()
+# 
+# 
+# plt <- pp + averaged_theme + guides(shape = guide_legend(order = 1)) + theme(legend.margin=margin(0,0,0,0), legend.box = "horizontal", legend.key.size = unit(0.4, "cm"), axis.text.x = element_text(size = 16), legend.position = c(0.8, 0.915)) 
+# pp + html_theme + guides(shape = guide_legend(order = 1)) + theme(legend.margin=margin(0,0,0,0), legend.box = "horizontal", legend.key.size = unit(0.4, "cm"), axis.text.x = element_text(size = 16), legend.position = c(0.8, 0.915)) 
+
+```
+```{r HED_time_saveFIG, echo=FALSE, include = FALSE, warning=FALSE}
+# cairo_pdf('figures/Figure_HED_time.pdf')
+# print(plt)
+# dev.off()
+```
+
+
+

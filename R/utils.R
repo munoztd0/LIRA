@@ -287,4 +287,20 @@ diffX = function(x){
   x$diff_BMIz = x$BMI_t1 - x$BMI_t2
   return(x)
 }
+
+idXses = function(x){
+  x$idXsession = as.numeric(x$id) * as.numeric(x$session)
+  return(x)
+}
+
+facID = function(x){
+  x$id = as.factor(x$id)
+  return(x)
+}
+
 `%notin%` <- Negate(`%in%`)
+
+# imput = function(x) {
+#   x[is.na(x)] <- 0 
+#   return(x)
+# }

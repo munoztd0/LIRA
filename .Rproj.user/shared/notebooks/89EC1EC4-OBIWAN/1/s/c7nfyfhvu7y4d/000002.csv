@@ -1,9 +1,0 @@
-"0","check_git()"
-"2","[32m✓[39m Git is installed, don't worry.
-"
-"0","check_make()"
-"2","[32m✓[39m Make is installed, don't worry.
-"
-"0","check_docker()"
-"2","[32m✓[39m Docker is installed, don't worry.
-"
