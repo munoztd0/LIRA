@@ -7,81 +7,6 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Number of Grips by learning phasis
-```{r INST_plot, echo=FALSE, warning=FALSE, cache=TRUE}
-dfL <- summarySEwithin(INST.means,
-                       measurevar = "grips",
-                       withinvars = "spline", 
-                       idvar = "id")
-
-dfL$cond <- ifelse(dfL$spline == "1", -0.25, 0.25)
-INST.means$cond <- ifelse(INST.means$spline == "1", -0.25, 0.25)
-INST.means <- INST.means %>% mutate(condjit = jitter(as.numeric(cond), 0.3),grouping = interaction(id, cond))
-
-
-# grips
-pp <- ggplot(INST.means, aes(x = cond, y = grips, 
-                            fill = spline, color = spline)) +
-  geom_line(aes(x = condjit, group = id, y = grips), alpha = .3, size = 0.5, color = 'gray' ) +
-  geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(fill = spline, color = NA)) +
-  geom_point(aes(x = condjit, shape = intervention), alpha = .3) +
-  geom_crossbar(data = dfL, aes(y = grips, ymin=grips-se, ymax=grips+se), width = 0.2 , alpha = 0.1)+
-  ylab('Number of grips')+
-  xlab('Learning phasis')+
-  scale_y_continuous(expand = c(0, 0), breaks = c(seq.int(0,30, by = 5)), limits = c(-0.05,30.5)) +
-  scale_x_continuous(labels=c("Early", "Late"),breaks = c(-.25,.25), limits = c(-.5,.5)) +
-  scale_fill_manual(values=c("1"= pal[4], "0"=  pal[1]), guide = 'none') +
-  scale_color_manual(values=c("1"= pal[4], "0"=  pal[1]), guide = 'none') +
-  scale_shape_manual(name="Intervention", labels=c("Placebo", "Liraglutide"), values = c(1, 2)) +
-  theme_bw()
-
-
-pp + html_theme +theme(legend.title  = element_text(size = 9),legend.text  = element_text(size = 9),legend.position=c(.92,.92))
-plt = pp + averaged_theme +theme(legend.title  = element_text(size = 10),legend.text  = element_text(size = 8),legend.position=c(.91,.91))
-```
-```{r INST_saveFIG, echo=FALSE, include = FALSE, warning=FALSE}
-cairo_pdf('figures/Figure_INST_trial_LIRA.pdf')
-print(plt)
-dev.off()
-```
-```{r INST_plot2, echo=FALSE, warning=FALSE, message=FALSE, cache=TRUE}
-## Number of Grips over time
-# dfTRIAL <- summarySEwithin(INST2, na.rm=TRUE,
-#                            measurevar = "grips",
-#                            withinvars = "trial",
-#                            idvar = "id")
-# 
-# 
-# dfTRIAL$trial       <- as.numeric(dfTRIAL$trial)
-# 
-# dfTRIALg <- summarySEwithin(INST2, na.rm=TRUE,
-#                            measurevar = "grips",
-#                            withinvars = "trial",
-#                            betweenvars = "intervention",
-#                            idvar = "id")
-# 
-# dfTRIALg$trial       <- as.numeric(dfTRIALg$trial)
-# 
-# dfTRIAL$x = dfTRIAL$trial; dfTRIAL$y = dfTRIAL$grips
-# splinelm <- lm(y ~ lspline(x, 5), data=dfTRIAL)
-# 
-# 
-# pp <- ggplot(dfTRIAL, aes(x =trial, y = grips)) +
-#   geom_point(data = dfTRIALg, aes(shape = intervention), alpha = 0.3, color = 'black') +
-#   geom_point(data = dfTRIAL, alpha = 0.5, color = pal[4], shape = 18) +
-#   #geom_line(color = pal[4]) +
-#   geom_smooth(method="lm", formula=formula(splinelm), color="tomato",fill = pal[4], size=0.7) + #addd this for lsplines
-#   #geom_ribbon(aes(ymin=grips-se, ymax=grips+se), fill = pal[4], alpha = 0.3)+
-#   ylab('Number of Grips')+
-#   xlab('Trial') +
-#   scale_y_continuous(expand = c(0, 0),  limits = c(10.5,15.05),  breaks=c(seq.int(11,15, by = 1))) +
-#   scale_x_continuous(expand = c(0, 0),  limits = c(0,15.1),  breaks=c(seq.int(1,15, by = 1))) +
-#   scale_shape_manual(name="Intervention", labels=c("Placebo", "Liraglutide"), values = c(1, 2, 18)) +
-#   theme_bw()
-# 
-# pp + html_theme + theme(legend.position=c(.9,.88), axis.text.x = element_text(size = 16))
-# plt = pp + averaged_theme + theme(legend.position=c(.9,.88), axis.text.x = element_text(size = 16))
-```
 
 
 # Pavlvovian-Instrumental Transfer (PIT) Task (Analysis)
@@ -415,4 +340,115 @@ dev.off()
 ```
 
 
+
+
+## Number of Grips by learning phasis
+```{r INST_plot, echo=FALSE, warning=FALSE, cache=TRUE}
+dfL <- summarySEwithin(INST.means,
+                       measurevar = "grips",
+                       withinvars = "spline", 
+                       idvar = "id")
+
+dfL$cond <- ifelse(dfL$spline == "1", -0.25, 0.25)
+INST.means$cond <- ifelse(INST.means$spline == "1", -0.25, 0.25)
+INST.means <- INST.means %>% mutate(condjit = jitter(as.numeric(cond), 0.3),grouping = interaction(id, cond))
+
+
+# grips
+pp <- ggplot(INST.means, aes(x = cond, y = grips, 
+                             fill = spline, color = spline)) +
+  geom_line(aes(x = condjit, group = id, y = grips), alpha = .3, size = 0.5, color = 'gray' ) +
+  geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(fill = spline, color = NA)) +
+  geom_point(aes(x = condjit, shape = intervention), alpha = .3) +
+  geom_crossbar(data = dfL, aes(y = grips, ymin=grips-se, ymax=grips+se), width = 0.2 , alpha = 0.1)+
+  ylab('Number of grips')+
+  xlab('Learning phasis')+
+  scale_y_continuous(expand = c(0, 0), breaks = c(seq.int(0,30, by = 5)), limits = c(-0.05,30.5)) +
+  scale_x_continuous(labels=c("Early", "Late"),breaks = c(-.25,.25), limits = c(-.5,.5)) +
+  scale_fill_manual(values=c("1"= pal[4], "-1"=  pal[1]), guide = 'none') +
+  scale_color_manual(values=c("1"= pal[4], "-1"=  pal[1]), guide = 'none') +
+  scale_shape_manual(name="Intervention", labels=c("Placebo", "Liraglutide"), values = c(1, 2)) +
+  facet_wrap(~session, labeller=labeller(session = labels)) +
+  theme_bw()
+
+
+pp + html_theme +theme(legend.title  = element_text(size = 9),legend.text  = element_text(size = 9),legend.position=c(.95,.98))
+plt = pp + averaged_theme +theme(legend.title  = element_text(size = 10),legend.text  = element_text(size = 8),legend.position=c(.95,.98))
+```
+
+## Number of Grips by learning phasis
+```{r INST_plot, echo=FALSE, warning=FALSE, cache=TRUE}
+dfL <- summarySEwithin(INST.means,
+                       measurevar = "grips",
+                       withinvars = "spline", 
+                       idvar = "id")
+
+dfL$cond <- ifelse(dfL$spline == "1", -0.25, 0.25)
+INST.means$cond <- ifelse(INST.means$spline == "1", -0.25, 0.25)
+INST.means <- INST.means %>% mutate(condjit = jitter(as.numeric(cond), 0.3),grouping = interaction(id, cond))
+
+
+# grips
+pp <- ggplot(INST.means, aes(x = cond, y = grips, 
+                            fill = spline, color = spline)) +
+  geom_line(aes(x = condjit, group = id, y = grips), alpha = .3, size = 0.5, color = 'gray' ) +
+  geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(fill = spline, color = NA)) +
+  geom_point(aes(x = condjit, shape = intervention), alpha = .3) +
+  geom_crossbar(data = dfL, aes(y = grips, ymin=grips-se, ymax=grips+se), width = 0.2 , alpha = 0.1)+
+  ylab('Number of grips')+
+  xlab('Learning phasis')+
+  scale_y_continuous(expand = c(0, 0), breaks = c(seq.int(0,30, by = 5)), limits = c(-0.05,30.5)) +
+  scale_x_continuous(labels=c("Early", "Late"),breaks = c(-.25,.25), limits = c(-.5,.5)) +
+  scale_fill_manual(values=c("1"= pal[4], "0"=  pal[1]), guide = 'none') +
+  scale_color_manual(values=c("1"= pal[4], "0"=  pal[1]), guide = 'none') +
+  scale_shape_manual(name="Intervention", labels=c("Placebo", "Liraglutide"), values = c(1, 2)) +
+  theme_bw()
+
+
+pp + html_theme +theme(legend.title  = element_text(size = 9),legend.text  = element_text(size = 9),legend.position=c(.92,.92))
+plt = pp + averaged_theme +theme(legend.title  = element_text(size = 10),legend.text  = element_text(size = 8),legend.position=c(.91,.91))
+```
+```{r INST_saveFIG, echo=FALSE, include = FALSE, warning=FALSE}
+cairo_pdf('figures/Figure_INST_trial_LIRA.pdf')
+print(plt)
+dev.off()
+```
+```{r INST_plot2, echo=FALSE, warning=FALSE, message=FALSE, cache=TRUE}
+## Number of Grips over time
+# dfTRIAL <- summarySEwithin(INST2, na.rm=TRUE,
+#                            measurevar = "grips",
+#                            withinvars = "trial",
+#                            idvar = "id")
+# 
+# 
+# dfTRIAL$trial       <- as.numeric(dfTRIAL$trial)
+# 
+# dfTRIALg <- summarySEwithin(INST2, na.rm=TRUE,
+#                            measurevar = "grips",
+#                            withinvars = "trial",
+#                            betweenvars = "intervention",
+#                            idvar = "id")
+# 
+# dfTRIALg$trial       <- as.numeric(dfTRIALg$trial)
+# 
+# dfTRIAL$x = dfTRIAL$trial; dfTRIAL$y = dfTRIAL$grips
+# splinelm <- lm(y ~ lspline(x, 5), data=dfTRIAL)
+# 
+# 
+# pp <- ggplot(dfTRIAL, aes(x =trial, y = grips)) +
+#   geom_point(data = dfTRIALg, aes(shape = intervention), alpha = 0.3, color = 'black') +
+#   geom_point(data = dfTRIAL, alpha = 0.5, color = pal[4], shape = 18) +
+#   #geom_line(color = pal[4]) +
+#   geom_smooth(method="lm", formula=formula(splinelm), color="tomato",fill = pal[4], size=0.7) + #addd this for lsplines
+#   #geom_ribbon(aes(ymin=grips-se, ymax=grips+se), fill = pal[4], alpha = 0.3)+
+#   ylab('Number of Grips')+
+#   xlab('Trial') +
+#   scale_y_continuous(expand = c(0, 0),  limits = c(10.5,15.05),  breaks=c(seq.int(11,15, by = 1))) +
+#   scale_x_continuous(expand = c(0, 0),  limits = c(0,15.1),  breaks=c(seq.int(1,15, by = 1))) +
+#   scale_shape_manual(name="Intervention", labels=c("Placebo", "Liraglutide"), values = c(1, 2, 18)) +
+#   theme_bw()
+# 
+# pp + html_theme + theme(legend.position=c(.9,.88), axis.text.x = element_text(size = 16))
+# plt = pp + averaged_theme + theme(legend.position=c(.9,.88), axis.text.x = element_text(size = 16))
+```
 

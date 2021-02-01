@@ -1,7 +1,6 @@
 ---
 title: "OBIWAN BEHAVIORAL ANALYSIS"
 author: "David Munoz Tord"
-date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
   pdf_document:
     dev: cairo_pdf
@@ -16,47 +15,48 @@ repro:
     intern: data/internal.csv
     medic: data/medic.csv
   packages:
-  - aaronpeikert/repro@adb5fa569
-  - crsh/papaja@devel
-  - tinylabels
-  - apaTables
-  - MBESS
-  - afex
-  - car
-  - ggplot2
-  - plyr
-  - dplyr
-  - tidyr
-  - reshape
-  - Hmisc
-  - Rmisc
-  - ggpubr
-  - ez
-  - gridExtra
-  - plotrix
-  - parallel
-  - emmeans
-  - BayesFactor
-  - effectsize
-  - devtools
-  - misty
-  - bayestestR
-  - lspline
-  - kableExtra
-  - sjPlot
-  - knitr
-  - XML
-  - rlist
-  - janitor
-  - optimx
+    - aaronpeikert/repro@adb5fa569
+    - crsh/papaja@devel
+    - tinylabels
+    - apaTables
+    - MBESS
+    - afex
+    - car
+    - ggplot2
+    - plyr
+    - dplyr
+    - tidyr
+    - reshape
+    - Hmisc
+    - Rmisc
+    - ggpubr
+    - ez
+    - gridExtra
+    - plotrix
+    - parallel
+    - emmeans
+    - BayesFactor
+    - effectsize
+    - devtools
+    - misty
+    - bayestestR
+    - lspline
+    - kableExtra
+    - sjPlot
+    - knitr
+    - XML
+    - rlist
+    - janitor
+    - optimx
   scripts: R/clean.R
   apt:
     - octave
     - gnuplot
     - libgsl0-dev
 ---
-
+  
 ```{r setup, echo=FALSE, include=FALSE}
+## setup
 knitr::opts_chunk$set(echo = FALSE, warnings=FALSE)
 
 library(repro)
@@ -72,15 +72,15 @@ PAV <- automate_load_data(PAV, read.csv, stringsAsFactors = T)
 INST <- automate_load_data(INST, read.csv, stringsAsFactors = T)
 PIT <- automate_load_data(PIT, read.csv, stringsAsFactors = T)
 HED <- automate_load_data(HED, read.csv, stringsAsFactors = T)
+
+x = session_info(); 
 ```
 
-## Setup
-
-This file was automatically created via `repro::automate()`
-<!-- May I suggest running `repro::automate()`? This will create a `Dockerfile` & `Makefile` based on every RMarkdown in this folder and the special yamls in them. -->
+This file was automatically created via `the Repro package (version 0.1.0)` using  `r x$platform[1]`
+<!-- May I suggest running `repro::automate()`? This will create a `Dockerfile` & `Makefile` based on every RMarkdown in this folder and the special yamls in them. date: "`r format(Sys.time(), '%d %B, %Y')`" -->
 <!-- add ENV DEBIAN_FRONTEND=noninteractive -->
 <!-- If you are unsure weather or not you have `git` `make` & `docker`. -->
-
+  
 ```{r check, eval=TRUE}
 # check_git()
 # check_make()
@@ -120,7 +120,7 @@ BMI %>%
 GENDER = ddply(df, .(id, intervention), summarise, gender=mean(as.numeric(gender)))  %>%
   group_by(gender, intervention) %>%
   tally(); GENDER$gender = as.factor(revalue(as.factor(GENDER$gender), c("1"="Men", "2"="Women"))); 
-  GENDER %>% kbl(caption ="GENDER") %>%
+GENDER %>% kbl(caption ="GENDER") %>%
   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%
   row_spec(0,bold=T,align='c')
 
@@ -146,22 +146,22 @@ PES.weight = pes_ci(as.formula(actual_formula), data = df, conf.level = .90, fac
 ```
 ```{r}
 nice(res) %>% kbl() %>%
-  kable_styling(latex_options = "striped", position = "left", full_width = F) 
+  kable_styling(latex_options = "striped", position = "center", full_width = F) 
 print('PES: intervention: Overall lower weight loss for Placebo')
 PES.weight[1,]
 ```
 ## Weight Loss X Intervention
 ```{r Weight_Loss, echo=FALSE, warning=FALSE, cache=TRUE}
 dfR <- summarySE(df, measurevar = "bmi_dif",
-                       groupvars = "intervention")
+                 groupvars = "intervention")
 
 dfR$cond <- ifelse(dfR$intervention == "Liraglutide", -0.25, 0.25)
 df$cond <- ifelse(df$intervention == "Liraglutide", -0.25, 0.25)
 df <- df %>% mutate(condjit = jitter(as.numeric(cond), 0.3),
-                                  grouping = interaction(id, cond))
+                    grouping = interaction(id, cond))
 
 pp <- ggplot(df, aes(x = cond, y = bmi_dif, 
-                            fill = intervention, color = intervention)) +
+                     fill = intervention, color = intervention)) +
   geom_hline(yintercept=0, linetype="dashed", size=0.4, alpha=0.8) +
   geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(fill = intervention, color = NA))+
   geom_point(aes(x = condjit), alpha = .3,) +
@@ -197,8 +197,8 @@ model = mixed(as.formula(paste(measurevar, paste (formula, COVA, random), sep="~
 table = nice(model);  ref_grid(model)  #triple check everything is centered at 0
 
 #calculate exclusion BF01 for each effect
-test = extractBF(generalTestBF(as.formula(paste(measurevar, paste (formula, COVA, 'id'), sep="~")), data= PAV.means, whichRandom = 'id', neverExclude =  'id', whichModels ="top")); BF = 1/test[1] #switch to BF10 inclusion)); BF = 1/test[1] #switch to BF10 inclusion
-table$BF10 = rev(BF$bf) # reorder to match lmer model
+# test = extractBF(generalTestBF(as.formula(paste(measurevar, paste (formula, COVA, 'id'), sep="~")), data= PAV.means, whichRandom = 'id', neverExclude =  'id', whichModels ="top")); BF = 1/test[1] #switch to BF10 inclusion)); BF = 1/test[1] #switch to BF10 inclusion
+# table$BF10 = rev(BF$bf) # reorder to match lmer model
 
 mod =  lmer(as.formula(paste(measurevar, paste (formula, COVA, random), sep="~")), data = PAV, control = control, REML = FALSE)
 tab_model(mod, show.p = F,show.intercept = F, show.se = T, title ="", show.re.var = F, digits = 2, dv.labels = "Latency", emph.p = TRUE, file = "tmp/temp1.html")
@@ -223,16 +223,7 @@ table %>% kbl(digits = 3) %>%
   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(0,bold=T,align='c')
 print('Condition: Overall lower latency for CS+')
 ```
-\
-```{r PAV_RT_cont, echo=FALSE, include=FALSE, cache=TRUE}
-#Estimated contrast mean and 95% CI\ (one sided test  side = "<")
-#p_cond = emmeans(mod, pairwise~ condition, side = "<"); p_cond #for condition (CS+ < CS- left sided!)
-#CI_cond = confint(emmeans(mod, pairwise~ condition),level = 0.95, method = c("boot"), nsim = 5000); 
-#tab =as_tibble(CI_cond$contrasts); tab$contrast = "CS+ > CS-"
 
-#tab %>% kbl() %>%
-  #kable_styling(latex_options = "striped", position = "left", full_width = F) 
-```
 ## Latency by condition
 ```{r PAV_RT_plot, echo=FALSE, warning=FALSE, cache=TRUE}
 # RT
@@ -263,8 +254,8 @@ pp <- ggplot(PAV.means, aes(x = cond, y = RT,
   scale_shape_manual(name="Intervention", labels=c("Placebo", "Liraglutide"), values = c(1, 2)) +
   theme_bw() + facet_wrap(~session, labeller=labeller(session = labels))
 
-plt = pp + averaged_theme 
-pp + html_theme 
+plt = pp + averaged_theme  + theme(legend.position=c(.96,.94), axis.text.x = element_text(size = 14))
+pp + html_theme  + theme(legend.position=c(.96,.94), axis.text.x = element_text(size = 14))
 ```
 ```{r PAV_RT_saveFIG, include=FALSE}
 cairo_pdf('figures/Figure_PavlovianRT_Lira.pdf')
@@ -272,7 +263,6 @@ print(plt)
 dev.off()
 ```
 ## Analysis: Pleasantness Ratings (Pavlovian Cue)
-
 Ratings = how pleasant is the clue (0-100, no repetitions)   &   condition = CS+ or CS-
 ```{r PAV_Lik, cache=TRUE, include=FALSE, message=FALSE}
 # -------------------------------------- Liking
@@ -297,8 +287,8 @@ table = table[c(10,1,5,2,3,4,5,11,15,6,16),]
 # tab_model(mod, show.p = F,show.intercept = F, show.se = T, title ="", show.re.var = F, digits = 2, dv.labels = "Pleasantness Ratings", emph.p = TRUE, file = "tmp/temp2.html")
 ```
 ```{r}
-table %>% kbl() %>%
-  kable_styling(latex_options = "striped", position = "left", full_width = F) 
+table %>% kbl(row.names = F) %>%
+  kable_styling(latex_options = "striped", position = "center", full_width = F) 
 ```
 ## Pleasantness Ratings by condition (Pavlvovian Cue)
 ```{r PAV_LIK_plot, echo=FALSE, warning=FALSE, cache=TRUE}
@@ -313,7 +303,7 @@ dfL$cond <- ifelse(dfL$condition == "1", -0.25, 0.25)
 # Liking
 pp <- ggplot(PAV.means, aes(x = cond, y = liking, 
                             fill = condition, color = condition)) +
-    geom_hline(yintercept=50, linetype="dashed", size=0.4, alpha=0.8) +
+  geom_hline(yintercept=50, linetype="dashed", size=0.4, alpha=0.8) +
   geom_line(aes(x = condjit, group = id, y = liking), alpha = .3, size = 0.5, color = 'gray' ) +
   geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(fill = condition, color = NA)) +
   geom_point(aes(x = condjit, shape = intervention), alpha = .3) +
@@ -328,8 +318,8 @@ pp <- ggplot(PAV.means, aes(x = cond, y = liking,
   theme_bw()+ facet_wrap(~session, labeller=labeller(session = labels))
 
 
-pp + html_theme 
-plt = pp + averaged_theme 
+plt = pp + averaged_theme  + theme(legend.position=c(.96,.94), axis.text.x = element_text(size = 14))
+pp + html_theme  + theme(legend.position=c(.96,.94), axis.text.x = element_text(size = 14))
 ```
 ```{r PAV_lik_saveFIG, include=FALSE}
 cairo_pdf('figures/Figure_PavlovianLiking_Lira.pdf')
@@ -339,26 +329,41 @@ dev.off()
 
 # Instrumental Conditioning Task (Analysis)
 grips = number of times participant exceeded the force threshold to acquire the reward (Milkshake)
-spline = first 5 trials (0), last 20 trials (1)
+spline = first 5 trials (1st degree), last 20 trials (2nd degree)
 
 ```{r INST, cache=TRUE,  include=FALSE, message=FALSE, warning=FALSE}
 measurevar = "grips"
-formula = "spline*intervention*session"
+formula = "*intervention*session"
 COVA = "+ age + gender + BMI_t1  + thirsty  + hungry +"
-random = '(spline*session|id) + (1|trial)'
+random = '(phase*session|id) + (intervention*session|trial)'
 
+## FACTORIAL EARLY/LATE LEARNING PHASIS
+facmod <- lmer(as.formula(paste(measurevar, paste('phase',formula, COVA, random), sep="~")),data=INST, control = control, REML = FALSE)
 
 ## PIECEWISE REGRESSION WITH SPLINES
-model = mixed(as.formula(paste(measurevar, paste(formula, COVA, random), sep="~")), data = INST, method = "LRT", control = control, REML = FALSE); model 
+splinemod <- lmer(as.formula(paste(measurevar, paste('lspline(Trial, 5)', formula, COVA, random), sep="~")),data=INST, control = control, REML = FALSE)
+
+BF_fit = as_tibble(bayesfactor_models(facmod, splinemod, denominator = facmod)); 
+```
+\
+```{r INST_MS, cache=TRUE}
+print('BF10 for model piecewise regression model ')
+BF_fit$BF[2]
+#BF_fit$BF10 = formatC(BF_fit$BF, format = "e", digits = 2); BF_fit$BF10[1] = 1; BF_fit = BF_fit[-c(2)]
+#   kbl(as_tibble(BF_fit), caption = "Model Fit Comparison", digits = 1) %>%
+#   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F)  %>%  row_spec(0,bold=T,align='c')
+```
+\
+```{r INST_m, cache=TRUE,  include=FALSE, message=FALSE, warning=FALSE}
+model = mixed(as.formula(paste(measurevar, paste ('Trial1*intervention*session + Trial2', formula, COVA, random), sep="~")), data = INST, method = "LRT", control = control, REML = FALSE); model
 
 table = nice(model);  ref_grid(model)  #triple check everything is centered at 0
+table = table[c(1, 4, 2, 3, 5, 6, 7, 8, 9, 10, 11, 13, 12, 14, 15, 16),]
+#calculate exclusion BF01 for each effect (had to change to trial instead of ID)
+# test = extractBF(generalTestBF(as.formula(paste(measurevar, paste('Trial1*intervention*session + Trial2', formula, COVA,  "trial"), sep="~")), data= INST.means, whichRandom = c('trial'), neverExclude =  'trial', whichModels ="top")); BF = 1/test[1] #switch to BF10 inclusion)); BF = 1/test[1] #switch to BF10 inclusion
+# table$BF10 = rev(BF$bf) # reorder to match lmer model
 
-#calculate exclusion BF01 for each effect
- 
-test = extractBF(generalTestBF(as.formula(paste(measurevar, paste (formula, COVA, 'id'), sep="~")), data= INST.means, whichRandom = c('id'), neverExclude =  'id', whichModels ="top")); BF = 1/test[1] #switch to BF10 inclusion)); BF = 1/test[1] #switch to BF10 inclusion
-table$BF10 = rev(BF$bf) # reorder to match lmer model
-
-mod <- lmer(as.formula(paste(measurevar, paste(formula, COVA, random), sep="~")),data=INST, control = control, REML = FALSE)
+mod <- splinemod
 tab_model(mod, show.p = F,show.intercept = F, show.se = T, title ="", show.re.var = F, digits = 2, dv.labels = "Grips", emph.p = TRUE, file = "tmp/temp3.html")
 ```
 \
@@ -370,7 +375,7 @@ tables2 <- as.matrix(tables2) %>% as_tibble()
 tables2[is.na(tables2)] <- ""
 tables2[1:length(table$Effect),1:4] %>% kbl(caption ="Grips", ) %>%
   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(0,bold=T,align='c')
-tmp = tables2[(length(table$Effect)+1):(length(table$Effect)+5),1:2]
+tmp = tables2[(length(table$Effect)+1):(length(table$Effect)+4),1:2]
 names(tmp) <- NULL
 tmp %>% kbl(digits = 2) %>%
   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) 
@@ -379,5 +384,262 @@ tmp %>% kbl(digits = 2) %>%
 ```{r INST_res}
 table %>% kbl(digits = 3) %>%
   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(0,bold=T,align='c')
-#print('Condition: Overall lower latency for CS+')
+#print('Condition: Overall')
+```
+## Number of Grips over time
+```{r INST_plot, echo=FALSE, warning=FALSE, message=FALSE, cache=TRUE}
+
+INSTPRE = subset(INST, session == 0)
+INSTPOST = subset(INST, session == 1)
+
+#--------------------------PRE
+dfTRIAL <- summarySEwithin(INSTPRE, na.rm=TRUE,
+                           measurevar = "grips",
+                           withinvars = c("trial","session"),
+                           idvar = "id")
+
+dfTRIAL$trial       <- as.numeric(dfTRIAL$trial)
+
+dfTRIALg <- summarySEwithin(INSTPRE, na.rm=TRUE,
+                            measurevar = "grips",
+                            withinvars = c("trial","session"),
+                            betweenvars = "intervention",
+                            idvar = "id")
+
+dfTRIALg$trial       <- as.numeric(dfTRIALg$trial)
+
+dfTRIAL$x = dfTRIAL$trial; dfTRIAL$y = dfTRIAL$grips
+splinelm <- lm(y ~ lspline(x, 5), data=dfTRIAL)
+
+pp <- ggplot(dfTRIAL, aes(x =trial, y = grips)) +
+  geom_point(data = dfTRIALg, aes(shape = intervention), alpha = 0.3, color = 'black') +
+  geom_point(data = dfTRIAL, alpha = 0.5, color = pal[4], shape = 18) +
+  #geom_line(color = pal[4]) +
+  geom_smooth(method="lm", formula=formula(splinelm), color="tomato",fill = pal[4], size=0.7) + #addd this for lsplines
+  #geom_ribbon(aes(ymin=grips-se, ymax=grips+se), fill = pal[4], alpha = 0.3)+
+  ylab('')+
+  xlab('') +
+  ggtitle("Pre") +
+  scale_y_continuous(expand = c(0, 0),  limits = c(11.5,15.5),  breaks=c(seq.int(12,15, by = 1))) +
+  scale_x_continuous(expand = c(0, 0),  limits = c(0,15.1),  breaks=c(1,5,10,15)) +
+  scale_shape_manual(name="Intervention", labels=c("Placebo", "Liraglutide"), values = c(1, 2, 18)) +
+  #facet_wrap(~session, labeller=labeller(session = labels)) +
+  theme_bw()
+
+#pp + html_theme + theme(legend.position='none', axis.text.x = element_text(size = 16))
+pltpre = pp + averaged_theme + theme(axis.text.x= element_text(size = 14), axis.text.y= element_text(size = 14), legend.position='none', plot.title = element_text(hjust = 0.5, size = 20))
+#-------------------------------POST
+dfTRIAL <- summarySEwithin(INSTPOST, na.rm=TRUE,
+                           measurevar = "grips",
+                           withinvars = c("trial","session"),
+                           idvar = "id")
+
+dfTRIAL$trial       <- as.numeric(dfTRIAL$trial)
+
+dfTRIALg <- summarySEwithin(INSTPOST, na.rm=TRUE,
+                            measurevar = "grips",
+                            withinvars = c("trial","session"),
+                            betweenvars = "intervention",
+                            idvar = "id")
+
+dfTRIALg$trial       <- as.numeric(dfTRIALg$trial)
+
+dfTRIAL$x = dfTRIAL$trial; dfTRIAL$y = dfTRIAL$grips
+
+pp <- ggplot(dfTRIAL, aes(x =trial, y = grips)) +
+  geom_point(data = dfTRIALg, aes(shape = intervention), alpha = 0.3, color = 'black') +
+  geom_point(data = dfTRIAL, alpha = 0.5, color = pal[4], shape = 18) +
+  #geom_line(color = pal[4]) +
+  geom_smooth(method="lm", color="tomato",fill = pal[4], size=0.7) + #addd this for lsplines
+  #geom_ribbon(aes(ymin=grips-se, ymax=grips+se), fill = pal[4], alpha = 0.3)+
+  ggtitle("Post") +
+  ylab('')+
+  xlab('') +
+  scale_y_continuous(expand = c(0, 0),  limits = c(11.5,15.5),  breaks=c(seq.int(12,15, by = 1))) +
+  scale_x_continuous(expand = c(0, 0),  limits = c(0,15.1),  breaks=c(1,5,10,15)) +
+  scale_shape_manual(name="Intervention", labels=c("Placebo", "Liraglutide"), values = c(1, 2, 18)) +
+  #facet_wrap(~session, labeller=labeller(session = labels)) +
+  theme_bw()
+
+#pp + html_theme + theme(legend.position='none', axis.text.x = element_text(size = 16))
+pltpost = pp + averaged_theme + theme(axis.text.x= element_text(size = 14), axis.text.y= element_text(size = 14, color="white"), legend.position=c(.94,.93), plot.title = element_text(hjust = 0.5, size = 20))
+
+figure = ggarrange(pltpre, pltpost, labels = c("", ""),
+  common.legend = F)
+
+
+plt = annotate_figure(figure,
+bottom = text_grob("Trial", size = 16),
+ left = text_grob("Number of Grips", rot = 90, size = 16),
+)
+plt
+# #, hjust = 1, x = 1, face = "italic", size = 10
+```
+```{r INST_saveFIG, echo=FALSE, include = FALSE, warning=FALSE}
+cairo_pdf('figures/Figure_INST_trial_LIRA.pdf')
+print(plt)
+dev.off()
+```
+
+# Pavlovian-Instrumental Transfer (PIT) Task
+Mobilized effort = Area under the curve of the force exerted exceeding the delivery threshold during Pavlvovian cue presentation
+condition = CS+ or CS-
+```{r PIT, echo=FALSE, include=FALSE, cache=TRUE}
+measurevar = "AUC"
+formula = "condition*intervention*session"
+COVA = "+ age + gender + BMI_t1  + thirsty  + hungry +"
+random = " (condition*session|id) + (1|trialxcondition)"
+
+#method LRT
+model = mixed(as.formula(paste(measurevar, paste (formula, COVA, random), sep="~")), data = PIT, method = "LRT", control = control, REML = FALSE); model
+
+table = nice(model);  ref_grid(model)  #triple check everything is centered at 0
+
+#calculate exclusion BF01 for each effect
+# test = extractBF(generalTestBF(as.formula(paste(measurevar, paste (formula, COVA, 'id'), sep="~")), data= PIT.means, whichRandom = 'id', neverExclude =  'id', whichModels ="top")); BF = 1/test[1] #switch to BF10 inclusion)); BF = 1/test[1] #switch to BF10 inclusion
+# table$BF10 = rev(BF$bf) # reorder to match lmer model
+
+mod =  lmer(as.formula(paste(measurevar, paste (formula, COVA, random), sep="~")), data = PIT, control = control, REML = FALSE)
+tab_model(mod, show.p = F,show.intercept = F, show.se = T, title ="", show.re.var = F, digits = 2, dv.labels = "Mobilized effort", emph.p = TRUE, file = "tmp/temp4.html")
+```
+\
+```{r PIT_mod}
+tables <- list.clean(readHTMLTable("tmp/temp4.html"), fun = is.null, recursive = FALSE)
+tables2 = tables[[1]] %>% janitor::row_to_names(row_number = 1)
+
+tables2 <- as.matrix(tables2) %>% as_tibble()
+tables2[is.na(tables2)] <- ""
+tables2[1:length(table$Effect),1:4] %>% kbl(caption ="Mobilized effort (a.u.)", ) %>%
+  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(0,bold=T,align='c')
+tmp = tables2[(length(table$Effect)+1):(length(table$Effect)+5),1:2]
+names(tmp) <- NULL
+tmp %>% kbl(digits = 2) %>%
+  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) 
+```
+\
+```{r PIT_res}
+table %>% kbl(digits = 3) %>%
+  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(0,bold=T,align='c')
+#print('Condition: Overall ')
+```
+## Mobilized effort by condition
+```{r PIT_plot, echo=FALSE, warning=FALSE, cache=TRUE}
+dfL <- summarySEwithin(PIT.means,
+                       measurevar = "AUC",
+                       withinvars = "condition",
+                       idvar = "id")
+
+dfL$cond <- ifelse(dfL$condition == "1", -0.25, 0.25)
+PIT.means$cond <- ifelse(PIT.means$condition == "1", -0.25, 0.25)
+PIT.means <- PIT.means %>% mutate(condjit = jitter(as.numeric(cond), 0.3),grouping = interaction(id, cond))
+
+
+# AUC
+pp <- ggplot(PIT.means, aes(x = cond, y = AUC,
+                            fill = condition, color = condition)) +
+  geom_line(aes(x = condjit, group = id, y = AUC), alpha = .3, size = 0.5, color = 'gray' ) +
+  geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(fill = condition, color = NA)) +
+  geom_point(aes(x = condjit, shape = intervention), alpha = .3) +
+  geom_crossbar(data = dfL, aes(y = AUC, ymin=AUC-se, ymax=AUC+se), width = 0.2 , alpha = 0.1)+
+  ylab('Mobilized effort (a.u.)')+
+  xlab('Condition')+
+  #scale_y_continuous(expand = c(0, 0), breaks = c(seq.int(0,30, by = 5)), limits = c(-0.05,30.5)) +
+  scale_x_continuous(labels=c("CS+", "CS-"),breaks = c(-.25,.25), limits = c(-.5,.5)) +
+  scale_fill_manual(values=c("1"= pal[6], "-1"=  pal[1]), guide = 'none') +
+  scale_color_manual(values=c("1"= pal[6], "-1"=  pal[1]), guide = 'none') +
+  scale_shape_manual(name="Intervention", labels=c("Placebo", "Liraglutide"), values = c(1, 2)) +
+  theme_bw()+ facet_wrap(~session, labeller=labeller(session = labels))
+
+
+
+pp + html_theme +theme(legend.title  = element_text(size = 9),legend.text  = element_text(size = 9),legend.position=c(.94,.94))
+plt = pp + averaged_theme +theme(legend.title  = element_text(size = 10),legend.text  = element_text(size = 8),legend.position=c(.94,.94))
+```
+```{r PIT_save, echo=FALSE, include = FALSE, warning=FALSE}
+cairo_pdf('figures/Figure_PIT_Lira.pdf')
+print(plt)
+dev.off()
+```
+
+# Hedonic Reactivity Test (Analysis)
+Perceived liking = how pleasant is the liquid solution rated (0-100, with repetitions)   &   condition = Milshake or Tasteless   &   intensity = how intense the liquid solution were rated 
+```{r HED, echo=FALSE, include=FALSE, cache=TRUE}
+measurevar = "lik"
+formula = "condition*intervention*session"
+COVA = "+ age + gender + BMI_t1  + thirsty  + hungry + int  + "
+random = " (condition*session|id) + (1|trialxcondition)"
+
+#method LRT
+model = mixed(as.formula(paste(measurevar, paste (formula, COVA, random), sep="~")), data = HED, method = "LRT", control = control, REML = FALSE); model
+
+table = nice(model);  ref_grid(model)  #triple check everything is centered at 0
+
+#calculate exclusion BF01 for each effect
+# test = extractBF(generalTestBF(as.formula(paste(measurevar, paste (formula, COVA, 'id'), sep="~")), data= HED.means, whichRandom = 'id', neverExclude =  'id', whichModels ="top")); BF = 1/test[1] #switch to BF10 inclusion)); BF = 1/test[1] #switch to BF10 inclusion
+# table$BF10 = rev(BF$bf) # reorder to match lmer model
+
+mod =  lmer(as.formula(paste(measurevar, paste (formula, COVA, random), sep="~")), data = HED, control = control, REML = FALSE)
+tab_model(mod, show.p = F,show.intercept = F, show.se = T, title ="", show.re.var = F, digits = 2, dv.labels = "Perceived liking", emph.p = TRUE, file = "tmp/temp5.html")
+```
+\
+```{r HED_mod}
+tables <- list.clean(readHTMLTable("tmp/temp5.html"), fun = is.null, recursive = FALSE)
+tables2 = tables[[1]] %>% janitor::row_to_names(row_number = 1)
+
+tables2 <- as.matrix(tables2) %>% as_tibble()
+tables2[is.na(tables2)] <- ""
+tables2[1:length(table$Effect),1:4] %>% kbl(caption ="Perceived liking", ) %>%
+  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(0,bold=T,align='c')
+tmp = tables2[(length(table$Effect)+1):(length(table$Effect)+5),1:2]
+names(tmp) <- NULL
+tmp %>% kbl(digits = 2) %>%
+  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) 
+```
+\
+```{r HED_res}
+table %>% kbl(digits = 3) %>%
+  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(0,bold=T,align='c')
+#print('Condition: Overall ')
+```
+
+## Perceived liking (Taste) by condition
+```{r HED_plot, echo=FALSE, warning=FALSE, cache=TRUE}
+
+# AVERAGED EFFECT
+dfH <- summarySEwithin(HED.means,
+                       measurevar = "lik",
+                       withinvars = "condition", 
+                       idvar = "id")
+
+dfH$cond <- ifelse(dfH$condition == "1", -0.25, 0.25)
+HED.means$cond <- ifelse(HED.means$condition == "1", -0.25, 0.25)
+set.seed(666)
+HED.means <- HED.means %>% mutate(condjit = jitter(as.numeric(cond), 0.3),
+                                  grouping = interaction(id, cond))
+
+
+pp <- ggplot(HED.means, aes(x = cond, y = lik, 
+                            fill = condition, color = condition)) +
+  geom_point(data = dfH, alpha = 0.5) +
+  geom_line(aes(x = condjit, group = id, y = lik), alpha = .3, size = 0.5, color = 'gray') +
+  geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(fill = condition, color = NA))+
+  geom_point(aes(x = condjit, shape = intervention), alpha = .3,) +
+  geom_crossbar(data = dfH, aes(y = lik, ymin=lik-se, ymax=lik+se), width = 0.2 , alpha = 0.1)+
+  ylab('Perceived liking') +
+  xlab('Taste') +
+  scale_y_continuous(expand = c(0, 0), breaks = c(seq.int(0,100, by = 20)), limits = c(-0.5,100.5)) +
+  scale_x_continuous(labels=c("Pleasant", "Neutral"),breaks = c(-.25,.25), limits = c(-.5,.5)) +
+  scale_fill_manual(values=c("1"= pal[3], "-1"=pal[1]), guide = 'none') +
+  scale_color_manual(values=c("1"=pal[3], "-1"=pal[1]), guide = 'none') +
+  scale_shape_manual(name="Intervention", labels=c("Placebo", "Liraglutide"), values = c(1, 2)) +
+  theme_bw()+ facet_wrap(~session, labeller=labeller(session = labels))
+
+
+pp + html_theme +theme(legend.title  = element_text(size = 9),legend.text  = element_text(size = 9),legend.position=c(.70,.15))
+plt = pp + averaged_theme +theme(legend.title  = element_text(size = 5),legend.text  = element_text(size = 8),legend.position=c(.97,.15))
+```
+```{r HED_saveFIG, echo=FALSE, include = FALSE, warning=FALSE}
+cairo_pdf('figures/Figure_HED_Lira.pdf')
+print(plt)
+dev.off()
 ```

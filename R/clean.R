@@ -98,26 +98,31 @@ PAV.means$hungry[is.na(PAV.means$hungry)] <- 0
 
 # clean INST --------------------------------------------------------------
 INST$age = INST$age_Z
+INST$Trial = as.numeric(INST$trial)
+x = lspline(INST$Trial, 5); INST$Trial1 = x[,1]; INST$Trial2 = x[,2]; 
 
 # define as.factors
 fac <- c("id", "trial", "session", "intervention", "gender"); INST[fac] <- lapply(INST[fac], factor)
 
 #revalue all catego
 INST$session = as.factor(revalue(INST$session, c(second="0", third="1"))) #change value of session
-INST$spline = ifelse(as.numeric(INST$trial) > 5, 1, -1); INST$spline = as.factor(INST$spline) #create spline at fifth trial
+INST$phase = ifelse(as.numeric(INST$trial) > 5, 1, -1); INST$phase = as.factor(INST$phase) #create phase at fifth trial
 
-INST.means <- aggregate(INST[,c(numer, "age", "grips")] , by = list(INST$id,INST$spline, INST$session,INST$intervention, INST$gender), FUN = 'mean',na.action = na.omit)
+INST.means <- aggregate(INST[,c(numer, "age", "grips")] , by = list(INST$trial, INST$session,INST$intervention, INST$gender), FUN = 'mean',na.action = na.omit)
 
-colnames(INST.means) <- c('id', 'spline','session','intervention', 'gender', numer, "age", "grips")
+colnames(INST.means) <- c('trial','session','intervention', 'gender', numer, "age", "grips")
 
 #imput mean (0) for the two covariate (MAR) so we can get BF (missing values for 3 participant 239, 258, 231)
 INST.means$thirsty[is.na(INST.means$thirsty)] <- 0 
 INST.means$hungry[is.na(INST.means$hungry)] <- 0 
 
+INST.means$Trial = as.numeric(INST.means$trial)
+x = lspline(INST.means$Trial, 5); INST.means$Trial1 = x[,1]; INST.means$Trial2 = x[,2]; 
+
 
 
 # clean PIT --------------------------------------------------------------
-
+PIT = subset(PIT, condition != "BL")
 PIT$age = PIT$age_Z
 
 # define as.factors
@@ -164,7 +169,7 @@ HED.means$hungry[is.na(HED.means$hungry)] <- 0
 # ALL ---------------------------------------------------------------------
 
 #factorize ID
-tables <- c("PAV.means","INST.means","PIT.means","HED.means")
+tables <- c("PAV.means","PIT.means","HED.means")
 dflist <- lapply(mget(tables),function(x)facID(x))
 list2env(dflist, envir=.GlobalEnv)
 

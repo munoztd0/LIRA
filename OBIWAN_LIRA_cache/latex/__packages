@@ -10,8 +10,8 @@ afex
 carData
 car
 ggplot2
-dplyr
 plyr
+dplyr
 tidyr
 reshape
 lattice
