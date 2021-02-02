@@ -5,16 +5,15 @@ if(!require(pacman)) {
 pacman::p_load(tidyverse, dplyr, plyr, car, misty)
 
 analysis_path <- file.path('~/OBIWAN/DERIVATIVES/BEHAV') 
-data_path <- file.path('~/Desktop/SwitchDrive/LIRA/data/HED.Rdata') 
+data_path <- file.path('~/Desktop/SwitchDrive/LIRA/data/HED_fmri.Rdata') 
 
 setwd(analysis_path)
 
 load(data_path)
 `%notin%` <- Negate(`%in%`)
 #remove missing fmri data
-fMRI_HED = HED.means %>% filter(id %notin% c(201, 208, 210, 214, 216, 219, 222, 223, 226, 228, 233, 234, 240, 242, 245, 247, 249, 256, 258, 263, 267))
-fMRI_HED$lik = scale(fMRI_HED$lik)
-fMRI_HED$interXLik = ifelse(fMRI_HED$intervention == 0, -fMRI_HED$lik, fMRI_HED$lik)
+fMRI_HED = dfHED %>% filter(id %notin% c(201, 208, 210, 214, 216, 219, 222, 223, 226, 228, 233, 234, 240, 242, 245, 247, 249, 256, 258, 263, 267))
+
 
 # INPUT FOR FMRI ------------------------------------------------------------------- 
 

@@ -20,7 +20,7 @@ dflist <- lapply(mget(tables),function(x)merge(x, info, by = "id"))
 list2env(dflist, envir=.GlobalEnv)
 
 #merge with medic
-medic = subset(medic, session =="third")
+dfm = medic; medic = subset(medic, session =="third")
 dflist <- lapply(mget(tables),function(x)merge(x, medic, by = c("id", "session"), all.x = T))
 list2env(dflist, envir=.GlobalEnv)
 
@@ -148,8 +148,8 @@ HED$age = HED$age_Z
 
 #create and center fam and int covariate
 HED$lik = HED$perceived_familiarity #rename
-df = ddply(HED,.(id,session),summarise,fam=mean(perceived_familiarity), int=mean(perceived_intensity)); df$fam = scale(df$fam); df$int = scale(df$int)
-HED = merge(HED, df, by = c("id", "session"))
+dfl = ddply(HED,.(id,session),summarise,fam=mean(perceived_familiarity), int=mean(perceived_intensity)); dfl$fam = scale(dfl$fam); dfl$int = scale(dfl$int)
+HED = merge(HED, dfl, by = c("id", "session"))
 
 # define as.factors
 fac <- c("id", "trial", "condition", "session", "intervention","trialxcondition", "gender"); HED[fac] <- lapply(HED[fac], factor)
@@ -178,123 +178,26 @@ save(INST.means, file = "data/INST.Rdata")
 save(PIT.means, file = "data/PIT.Rdata")
 save(HED.means, file = "data/HED.Rdata")
 
+#creat df for AFNI
+internHED = subset(intern, phase ==5)
+dfx = x = Reduce(function(x,y) merge(x = x, y = y, by = "id"), 
+                 list(df, internHED, info)); dfx[is.na(dfx)] <- 0 
+x = Reduce(function(x,y) merge(x = x, y = y, by = c("id","session")), 
+           list(dfl, dfm, dfx))
+
+tables = c('x') 
+numer <- c("thirsty", "hungry",  "piss", "OEA", "PEA","X2.AG","AEA","Leptin",  "Resistin","adiponectin","MCP","TNFalpha","reelin","glucagon", "Ghrelin","obestatin","GLP1","insulin","Fast_glu","BMI_t1", "bmi_diff")
+dflist <- lapply(mget(tables),function(x) x %>% group_by %>% mutate_at(numer, scale))
+list2env(dflist, envir=.GlobalEnv); x$age = x$age_Z
+
+dfHED = select(x, -c(age_Z, bmi1, bmi_dif, task, phase, idXsession, BMI_t2, group))
+dfHED$session = as.factor(revalue(as.factor(dfHED$session), c("second"="0", "third"="1"))); dfHED1 = dfHED;  dfHED2 = dfHED; dfHED1$condition = "1"; dfHED2$condition = "-1"; dfHED = rbind(dfHED1, dfHED2); dfHED[is.na(dfHED)] <- 0 
+
+save(dfHED, file = "data/HED_fmri.Rdata")
+
 #create df for weight loss
 df = subset(PAV.means, session == "1"); df = subset(df, condition == "1")
-df$intervention = as.factor(revalue(as.factor(df$intervention), c("0"="Placebo", "1"="Liraglutide")));#using pav.means but oculd be any other
-
-# OLD ---------------------------------------------------------------------
-
-
-
-# 
-# # create baseline diff
-# 
-# First = subset(INST.means, spline == "0"); Last = subset(INST.means, spline == "1");  diff = First; diff$diff_base = First$base - Last$base
-# INST.means = merge(x = INST.means, y = diff[ , c("diff_base", 'id')], by = "id", all.x=TRUE)
-# 
-# # gather PIT --------------------------------------------------------------------
-# 
-# PIT.means <- aggregate(PIT$AUC, by = list(PIT$id, PIT$condition, PIT$session), FUN='mean') # extract means
-# PIT.means = spread(PIT.means, Group.3, x)
-# colnames(PIT.means) <- c('id', 'condition','baseline', 'AUC')
-# 
-# #remove the baseline (we just use it for fMRI analysis)
-# PIT.means =  subset(PIT.means, condition != 'BL') 
-# 
-# PIT.means = na.omit(PIT.means); # remove dropout participants
-# 
-# # create baseline diff
-# Empty = subset(PIT.means, condition == "CSminus"); Milkshake = subset(PIT.means, condition == "CSplus"); diff = Empty;
-# diff$diff_base = Milkshake$baseline - Empty$baseline
-# PIT.means = merge(x = PIT.means, y = diff[ , c("diff_base", 'id')], by = "id", all.x=TRUE)
-# 
-# 
-# # gather HED --------------------------------------------------------------
-# 
-# HED.means <- aggregate(list(liking=HED$perceived_liking, intensity=HED$perceived_intensity, familiarity=HED$perceived_familiarity), by = list(HED$id, HED$condition, HED$session), FUN='mean') # extract means
-# HED.means = HED.means %>% gather(variable, value, (liking:familiarity)) %>%  unite(var, variable,Group.3) %>% spread(var, value)
-# colnames(HED.means) <- c('id','condition', 'baseline_fam', 'familiarity', 'baseline_int', 'intensity', 'baseline_lik', 'liking')
-# 
-# HED.means = na.omit(HED.means); # remove dropout participants
-# 
-# 
-# # create Intensity and Familiarity diff
-# Empty = subset(HED.means, condition == "Empty"); Milkshake = subset(HED.means, condition == "MilkShake"); diff = Empty;
-# diff$int = Milkshake$intensity - Empty$intensity; diff$fam = Milkshake$familiarity - Empty$familiarity;
-# HED.means = merge(x = HED.means, y = diff[ , c("int", "fam", 'id')], by = "id", all.x=TRUE)
-# HED.means = HED.means %>% group_by %>% mutate_at(c("int", "fam"), scale)
-# 
-# # create baseline diff
-# diff$diff_base = Milkshake$baseline_lik - Empty$baseline_lik
-# HED.means = merge(x = HED.means, y = diff[ , c("diff_base", 'id')], by = "id", all.x=TRUE)
-# 
-# 
-# #merge with info
-# tables = c('PAV.means', 'INST.means', 'PIT.means', 'HED.means')
-# dflist <- lapply(mget(tables),function(x)merge(x, info, by = "id"))
-# list2env(dflist, envir=.GlobalEnv)
-# 
-# #merge with medic
-# dflist <- lapply(mget(tables),function(x)merge(x, medic, by = "id"))
-# list2env(dflist, envir=.GlobalEnv)
-# 
-# # creates diff BMI for each data
-# dflist <- lapply(mget(tables),function(x) diffX(x))
-# list2env(dflist, envir=.GlobalEnv)
-# 
-# # creates internal states variables for each data
-# listA = 2:5
-# dflist = mapply(internal,tables,listA)
-# list2env(dflist, envir=.GlobalEnv)
-# 
-# PAV.means$BMI1 = PAV.means$BMI_t1 # keep it unstandadized for later
-# 
-# #center covariates
-# dflist <- lapply(mget(tables),function(x) x %>% group_by %>% mutate_at(c("thirsty", "hungry", "age", "diff_BMIz", "BMI_t1", "diff_base"), scale))
-# list2env(dflist, envir=.GlobalEnv)
-# 
-# #imput mean (0 since its mean centered) for the two participant that have missing covariate (MAR) data so we can still use them in ANCOVA (this happens only for thirsty and hungry) in PAV 232 // 231 & 239 in INST // 229 in PIT // 
-# tables <- c("PAV.means", "INST.means", "PIT.means")
-# dflist <- lapply(mget(tables),function(x) imput(x))
-# list2env(dflist, envir=.GlobalEnv)
-# 
-# 
-# 
-# # clean PAV --------------------------------------------------------------
-# 
-# # define as.factors
-# fac <- c("id", "condition", "gender", "intervention")
-# PAV.means[fac] <- lapply(PAV.means[fac], factor)
-# 
-# #revalue all catego
-# PAV.means$condition = as.factor(revalue(PAV.means$condition, c(CSminus="-1", CSplus="1"))); PAV.means$condition <- factor(PAV.means$condition, levels = c("1", "-1"))#change value of condition
-# 
-# 
-# # clean PIT --------------------------------------------------------------
-# 
-# # define as factors
-# PIT.means[fac] <- lapply(PIT.means[fac], factor)
-# 
-# #revalue all catego
-# PIT.means$condition = as.factor(revalue(PIT.means$condition, c(CSminus="-1", CSplus="1"))); PIT.means$condition <- factor(PIT.means$condition, levels = c("1", "-1"))#change value of condition
-# 
-# 
-# # clean HED ---------------------------------------------------------------
-# 
-# # define as.factors
-# HED.means[fac] <- lapply(HED.means[fac], factor)
-# 
-# #revalue all catego
-# HED.means$condition = as.factor(revalue(HED.means$condition, c(MilkShake="1", Empty="-1"))) #change value of condition
-# HED.means$condition <- relevel(HED.means$condition, "1") # Make MilkShake first
-# 
-# 
-# # clean INST -------------------------------------------------------------
-# 
-# #defne factors
-# fac <- c("id", "gender", "intervention")
-# INST.means[fac] <- lapply(INST.means[fac], factor)
-# #revalue all catego
+df$intervention = as.factor(revalue(as.factor(df$intervention), c("0"="Placebo", "1"="Liraglutide")))#using pav.means but oculd be any other
 
 
 

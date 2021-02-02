@@ -427,7 +427,7 @@ pp <- ggplot(dfTRIAL, aes(x =trial, y = grips)) +
   theme_bw()
 
 #pp + html_theme + theme(legend.position='none', axis.text.x = element_text(size = 16))
-pltpre = pp + averaged_theme + theme(axis.text.x= element_text(size = 14), axis.text.y= element_text(size = 14), legend.position='none', plot.title = element_text(hjust = 0.5, size = 20))
+pltpre = pp + averaged_theme + theme(axis.text.x= element_text(size = 14), axis.text.y= element_text(size = 14), legend.position='none', plot.title = element_text(hjust = 0.5, size = 20), plot.margin = unit(c(0, 1,-1.5,-2), "cm"))
 #-------------------------------POST
 dfTRIAL <- summarySEwithin(INSTPOST, na.rm=TRUE,
                            measurevar = "grips",
@@ -462,7 +462,7 @@ pp <- ggplot(dfTRIAL, aes(x =trial, y = grips)) +
   theme_bw()
 
 #pp + html_theme + theme(legend.position='none', axis.text.x = element_text(size = 16))
-pltpost = pp + averaged_theme + theme(axis.text.x= element_text(size = 14), axis.text.y= element_text(size = 14, color="white"), legend.position=c(.94,.93), plot.title = element_text(hjust = 0.5, size = 20))
+pltpost = pp + averaged_theme + theme(axis.text.x= element_text(size = 14), axis.text.y= element_text(size = 14, color="white"), legend.position=c(.94,.93), plot.title = element_text(hjust = 0.5, size = 20), plot.margin = unit(c(0, 1,-1.5,-2), "cm"))
 
 figure = ggarrange(pltpre, pltpost, labels = c("", ""),
   common.legend = F)
@@ -470,7 +470,7 @@ figure = ggarrange(pltpre, pltpost, labels = c("", ""),
 
 plt = annotate_figure(figure,
 bottom = text_grob("Trial", size = 16),
- left = text_grob("Number of Grips", rot = 90, size = 16),
+ left = text_grob("Number of Grips \n ", rot = 90, size = 16),
 )
 plt
 # #, hjust = 1, x = 1, face = "italic", size = 10

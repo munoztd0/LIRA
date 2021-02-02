@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.21 (TeX Live 2020/Debian) (preloaded format=pdflatex 2020.12.7)  1 FEB 2021 19:20
+This is pdfTeX, Version 3.14159265-2.6-1.40.21 (TeX Live 2020/Debian) (preloaded format=pdflatex 2020.12.7)  1 FEB 2021 19:39
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -713,13 +713,13 @@ Package pdftex.def Info: OBIWAN_LIRA_files/figure-latex/PAV_LIK_plot-1.pdf  use
 d on input line 370.
 (pdftex.def)             Requested size: 458.71263pt x 285.0643pt.
 [5 <./OBIWAN_LIRA_files/figure-latex/PAV_LIK_plot-1.pdf>]
-<OBIWAN_LIRA_files/figure-latex/INST_plot-1.pdf, id=162, 466.74374pt x 307.1475
+<OBIWAN_LIRA_files/figure-latex/INST_plot-1.pdf, id=162, 459.7175pt x 322.20375
 pt>
 File: OBIWAN_LIRA_files/figure-latex/INST_plot-1.pdf Graphic file (type pdf)
 <use OBIWAN_LIRA_files/figure-latex/INST_plot-1.pdf>
 Package pdftex.def Info: OBIWAN_LIRA_files/figure-latex/INST_plot-1.pdf  used o
 n input line 490.
-(pdftex.def)             Requested size: 466.76396pt x 307.1608pt.
+(pdftex.def)             Requested size: 459.73741pt x 322.2177pt.
 [6pdfTeX warning (ext4): destination with the same identifier (name{table.6}) h
 as been already used, duplicate ignored
 
@@ -779,7 +779,7 @@ public/lm/lmbx10.pfb></usr/share/texmf/fonts/type1/public/lm/lmbx12.pfb></usr/s
 hare/texmf/fonts/type1/public/lm/lmr10.pfb></usr/share/texmf/fonts/type1/public
 /lm/lmr12.pfb></usr/share/texmf/fonts/type1/public/lm/lmr17.pfb></usr/share/tex
 mf/fonts/type1/public/lm/lmtt10.pfb>
-Output written on OBIWAN_LIRA.pdf (10 pages, 345520 bytes).
+Output written on OBIWAN_LIRA.pdf (10 pages, 345554 bytes).
 PDF statistics:
  283 PDF objects out of 1000 (max. 8388607)
  226 compressed objects within 3 object streams

@@ -4,24 +4,29 @@ cd ~/OBIWAN/DERIVATIVES/GLM/AFNI/hedonicreactivity
 
 #-mask /home/OBIWAN/DERIVATIVES/EXTERNALDATA/LABELS/GM/maskGM.nii \
 #run 3dlme in afni
-3dLME  -prefix lme_cov -jobs 20 \
--model "condition*session+gender+age+bmi_diff+BMI_t1+GLP1+Fast_glu+thirsty+hungry+piss+fam+int" \
--resid residuals_cov.nii \
--mask mask.nii  \
--qVars 'age,bmi_diff,BMI_t1,GLP1,Fast_glu,thirsty,hungry,piss,fam,int' \
--qVarsCenters '0,0,0,0,0,0,0,0,0,0' \
+3dLME  -prefix lme_cond -jobs 20 \
+-model "condition*session*lik+gender+age+bmi_diff+BMI_t1+GLP1+Fast_glu+thirsty+hungry+piss+condition*fam+condition*int" \
+-resid  residuals_cond.nii \
+-mask mask.nii \
+-qVars 'lik,age,bmi_diff,BMI_t1,GLP1,Fast_glu,thirsty,hungry,piss,fam,int' \
+-qVarsCenters '0,0,0,0,0,0,0,0,0,0,0' \
 -ranEff '~1|Subj' \
 -SS_type 3 \
--num_glt 2 \
--gltLabel 1 'Taste-NoTasteXPost-PreXInterXLira-Pre' -gltCode 1 'condition : 1*Reward -1*Neutral session : 1*1 -1*0'  \
--gltLabel 2 'Taste-NoTasteXPost-PreXInterXLira-Pre' -gltCode 2 'condition : 1*Reward -1*Neutral session : 1*0 -1*1'  \
--dataTable @HED_LME_cov.txt\
+-num_glt 7 \
+-gltLabel 1 'Taste-NoTaste' -gltCode 1 'condition : 1*Reward -1*Neutral'  \
+-gltLabel 2 'CondXLik' -gltCode 2 'condition : 1*Reward -1*Neutral lik :'  \
+-gltLabel 3 'CondXInt' -gltCode 3 'condition : 1*Reward -1*Neutral int :'  \
+-gltLabel 4 'CondXFam' -gltCode 4 'condition : 1*Reward -1*Neutral fam :'  \
+-gltLabel 5 'GLP1' -gltCode 5 'GLP1 :'  \
+-gltLabel 6 'Fasting_glucose' -gltCode 6 'Fast_glu :'  \
+-gltLabel 7 'session' -gltCode 7 'session : 1*1 -1*0'  \
+-dataTable @HED_LME_nocov.txt\
 
-#3dresample -dxyz 3.0 3.0 3.6 -prefix mask.nii -input maskGM.nii 
+
 #AFNItoNIFTI -prefix test lme+tlrc[5]
-for i in 14 16 18
+for i in 22 30 32 34
 do
-/usr/local/abin/3dAFNItoNIFTI -prefix lme_cov_con${i} lme_cov+tlrc[${i}]
+/usr/local/abin/3dAFNItoNIFTI -prefix lme_cond_con${i} lme_cond+tlrc[${i}]
 done
 
 ++ Smallest FDR q [0 (Intercept)  F] = 1.62341e-14
