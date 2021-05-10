@@ -1,1 +1,1 @@
-RUN apt-get update -y && apt-get install -y octave gnuplot libgsl0-dev
+RUN apt-get update -y && apt-get install -y libgsl0-dev

@@ -1,8 +1,8 @@
-PROJECT := t0
+PROJECT := lira
 WORKDIR := $(CURDIR)
 
 # list below your targets and their recipies
-all: OBIWAN.pdf
+all: OBIWAN_T0.pdf
 
 ### Wrap Commands ###
 # if a command is to be send to another process e.g. a container/scheduler use:

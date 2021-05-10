@@ -51,7 +51,7 @@ tdiagnostic <- function(merMod) {
 # data       = a data frame in which the variables specified in the formula will be found
 # conf.level = level of the confidence interval between 0 to 1 [default -> .90]
 # epsilon    = epsilon correction used to adjust the lack of sphericity for factors involving repeated measures among 
-#              list("default", "none, "GG", "HF")
+#              list("default", "none", "GG", "HF")
 #              - default: use Greenhouse-Geisser (GG) correction when epsilon GG < .75, Huynh-Feldt (HF) correction 
 #                         when epsilon GG = [.75, .90], and no correction when epsilon GG >= .90 [default]
 #              - none: use no sphericity correction
@@ -287,6 +287,11 @@ diffX = function(x){
   x$diff_BMIz = x$BMI_t1 - x$BMI_t2
   return(x)
 }
+
+# diffXglu = function(x){
+#   x$glu = x$Fast_glu_third - x$Fast_glu_second
+#   return(x)
+# }
 
 idXses = function(x){
   x$idXsession = as.numeric(x$id) * as.numeric(x$session)

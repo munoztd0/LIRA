@@ -1,3 +1,6 @@
-OBIWAN.pdf OBIWAN.html: OBIWAN.Rmd data/HEDONIC.csv data/INST.csv data/PAV.csv data/PIT.csv data/info.csv data/internal.csv R/clean.R
+OBIWAN_LIRA.html OBIWAN_LIRA.pdf: OBIWAN_LIRA.Rmd data/HEDONIC.csv data/INST.csv data/PAV.csv data/PIT.csv data/internal.csv data/medic.csv data/HED_fmri.csv R/clean.R
+	$(RUN1) Rscript -e 'rmarkdown::render("$(WORKDIR)/$<", "all")' $(RUN2)
+
+todo.pdf: todo.Rmd
 	$(RUN1) Rscript -e 'rmarkdown::render("$(WORKDIR)/$<", "all")' $(RUN2)
 

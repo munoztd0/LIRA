@@ -1,26 +1,26 @@
-#!/bin/bash 
-
-cd ~/OBIWAN/DERIVATIVES/GLM/AFNI/hedonicreactivity
-
-#run 3dlme in afni
-3dLME  -prefix lme_cov -jobs 20 \
--model "condition*session*intervention+gender+age+bmi_diff+BMI_t1+GLP1+Fast_glu+thirsty+hungry+piss+fam+int" \
--resid residuals_cov.nii \
--mask mask.nii  \
--qVars 'age,bmi_diff,BMI_t1,GLP1,Fast_glu,thirsty,hungry,piss,fam,int' \
--qVarsCenters '0,0,0,0,0,0,0,0,0,0' \
--ranEff '~1|Subj' \
--SS_type 3 \
--num_glt 2 \
--gltLabel 1 'Taste-NoTasteXPost-PreXLira-Pla' -gltCode 1 'condition : 1*Reward -1*Neutral session : 1*1 -1*0 intervention :  1*1 -1*0'  \
--gltLabel 2 'Taste-NoTasteXPost-PreXPla-Lira' -gltCode 2 'condition : 1*Reward -1*Neutral session : 1*1 -1*0 intervention :  1*0 -1*1' \
--dataTable @HED_LME_cov.txt\
-
-#3dresample -dxyz 3.0 3.0 3.6 -prefix mask.nii -input maskGM.nii 
-#AFNItoNIFTI -prefix test lme+tlrc[5]
-for i in 14 16 18
-do
-/usr/local/abin/3dAFNItoNIFTI -prefix lme_cov_con${i} lme_cov+tlrc[${i}]
-done
-
-#get ddf 3dinfo -verbose lme_full+tlrc[16]
+  #!/bin/bash 
+  
+  cd ~/OBIWAN/DERIVATIVES/GLM/AFNI/hedonicreactivity
+  
+  #run 3dlme in afni
+  3dLME  -prefix lme_cov -jobs 20 \
+  -model "condition*session*intervention+gender+age+bmi_diff+BMI_t1+GLP1+Fast_glu+thirsty+hungry+piss+fam+int" \
+  -resid residuals_cov.nii \
+  -mask mask.nii  \
+  -qVars 'age,bmi_diff,BMI_t1,GLP1,Fast_glu,thirsty,hungry,piss,fam,int' \
+  -qVarsCenters '0,0,0,0,0,0,0,0,0,0' \
+  -ranEff '~1|Subj' \
+  -SS_type 3 \
+  -num_glt 2 \
+  -gltLabel 1 'Taste-NoTasteXPost-PreXLira-Pla' -gltCode 1 'condition : 1*Reward -1*Neutral session : 1*1 -1*0 intervention :  1*1 -1*0'  \
+  -gltLabel 2 'Taste-NoTasteXPost-PreXPla-Lira' -gltCode 2 'condition : 1*Reward -1*Neutral session : 1*1 -1*0 intervention :  1*0 -1*1' \
+  -dataTable @HED_LME_cov.txt\
+  
+  #3dresample -dxyz 3.0 3.0 3.6 -prefix mask.nii -input maskGM.nii 
+  #AFNItoNIFTI -prefix test lme+tlrc[5]
+  for i in 20 22
+  do
+  /usr/local/abin/3dAFNItoNIFTI -prefix lme_cov_con${i} lme_cov+tlrc[${i}]
+  done
+  
+  #get ddf 3dinfo -verbose lme_full+tlrc[16]
