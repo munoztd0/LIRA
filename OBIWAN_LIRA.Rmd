@@ -23,7 +23,11 @@ repro:
     medic: data/medic.csv
     HED_fMRI: data/HED_fmri.csv
     
+<<<<<<< HEAD
   packages: [ aaronpeikert/repro@devel, crsh/papaja@devel, tinylabels, apaTables, MBESS, afex, ggplot2, ggpubr, Rmisc, emmeans, tidyr, BayesFactor, bayestestR, devtools, lspline, kableExtra, sjPlot, knitr, XML, rlist, janitor, optimx, ggthemes, dplyr, JWileymisc, corrplot, glmnet, intmed, stringr, cowplot ]
+=======
+  packages: [ aaronpeikert/repro@devel, crsh/papaja@devel, tinylabels, apaTables, MBESS, afex, ggplot2, ggpubr, Rmisc, emmeans, tidyr, BayesFactor, bayestestR, devtools, lspline, kableExtra, sjPlot, knitr, XML, rlist, janitor, optimx, ggthemes, dplyr, JWileymisc, corrplot, glmnet, intmed, stringr, cowplo, pander]
+>>>>>>> 42279c50827469e90e4fe33c2e4f7c599ff95c43
   scripts: R/clean.R
   apt:
     - libgsl0-dev
@@ -127,14 +131,12 @@ ggplot(med)+
 
 ```
 \
-Using penalized (lasso) maximum likelihood for variable selection (cv.glmnet), i.e. finding the minimum lambda (regularization parameter) to infer the best number of features to use in order to simplify the model and avoid  overfitting.\
-Using that because: \
-- Handles the problem of correlated inputs
-- Perform better than stepwise selection
+
 ```{r var_sel, echo=FALSE, include=T, cached=T,fig.align="center"}
 
 #1) with Recursive Feature Eliminations (CARET)
 set.seed(666)
+<<<<<<< HEAD
 
 sizes = 1:length(dfmed[c(-1)])
 len = length(sizes)
@@ -143,11 +145,22 @@ for(i in 1:(len-1)) seeds[[i]]<- sample.int(n=1000, size = length(sizes)+1)
 # for the last model
 seeds[[len]]<-sample.int(1000, 1)
 
+=======
+
+sizes = 1:length(dfmed[c(-1)])
+len = length(sizes)
+seeds <- vector(mode = "list", length = len)
+for(i in 1:(len-1)) seeds[[i]]<- sample.int(n=10000, size = length(sizes)+1)
+# for the last model
+seeds[[len]]<-sample.int(10000, 1)
+
+>>>>>>> 42279c50827469e90e4fe33c2e4f7c599ff95c43
 RFEcontrol <- rfeControl(functions=rfFuncs, method="cv", number=10, seeds= seeds) # control options
 
 rfeResults = rfe(x = dfmed[c(-1)], y = dfmed$intervention, sizes=sizes, rfeControl=RFEcontrol)
 predictors(rfeResults)
 plot(rfeResults, type=c("g", "o")) # look for the "elbow"
+<<<<<<< HEAD
 
 # x<-model.matrix(intervention~.,data=dfmed); x=x[,-1]
 # 
@@ -158,6 +171,8 @@ plot(rfeResults, type=c("g", "o")) # look for the "elbow"
 # inds<-which(c!=0)
 # variables<-row.names(c)[inds]
 # variables<-variables[!variables %in% '(Intercept)']; variables
+=======
+>>>>>>> 42279c50827469e90e4fe33c2e4f7c599ff95c43
 
 ```
 
