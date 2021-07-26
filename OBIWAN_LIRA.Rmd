@@ -1,10 +1,15 @@
 ---
-title: "OBIWAN BEHAVIORAL ANALYSIS"
+title: "OBIWAN PLACEBO VS. TREATMENT ANALYSIS REPORT"
 author: "David Munoz Tord"
-output:   
-  html_document:     
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:  
+    includes:
+      in_header: header.html
+    css: "style.css"
+    code_folding: "hide"
     toc: true
-    toc_float: true
+    toc_float: false
     number_sections: false
   pdf_document:
     extra_dependencies: ["float"]
@@ -17,15 +22,17 @@ repro:
     intern: data/internal.csv
     medic: data/medic.csv
     HED_fMRI: data/HED_fmri.csv
-  packages: [ aaronpeikert/repro@devel, crsh/papaja@devel, tinylabels, apaTables, MBESS, afex, ggplot2, ggpubr, Rmisc, emmeans, tidyr, BayesFactor, bayestestR, devtools, lspline, kableExtra, sjPlot, knitr, XML, rlist, janitor, optimx, ggthemes, dplyr, JWileymisc, corrplot, glmnet, intmed, stringr, cowplot ]
+    
+  packages: [ aaronpeikert/repro@devel, crsh/papaja@devel, tinylabels, apaTables, MBESS, afex, ggplot2, ggpubr, Rmisc, emmeans, tidyr, BayesFactor, bayestestR, devtools, lspline, kableExtra, sjPlot, knitr, XML, rlist, janitor, optimx, ggthemes, dplyr, JWileymisc, corrplot, glmnet, intmed, stringr, cowplo, pander]
   scripts: R/clean.R
   apt:
     - libgsl0-dev
-editor_options: 
-  chunk_output_type: inline
 ---
-### Setup
-```{r setup, echo=FALSE, include=FALSE}
+
+### Setup {-}
+<!-- # TO DO -->
+  
+```{r setup, results='hide', message=FALSE, warning=FALSE}
 
 library(repro)
 # load packages from yaml header
@@ -43,46 +50,55 @@ HED      <- automate_load_data(HED, read.csv, stringsAsFactors = T)
 HED_fMRI <- automate_load_data(HED_fMRI, read.csv, stringsAsFactors = T)
 
 x = session_info();  opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE) # set F for all
+
+
+## we recommend running this is a fresh R session or restarting your current session
+#install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
+#install_cmdstan()
+
+
+# check_git(); check_make(); check_docker() #check if installed
+
+sessio = session_info(); #opts_chunk$set(echo = F, message=F, warning=F) # set echo F for all
 ```
 
-This file was automatically created via `the Repro package (version 0.1.0)` using  `r x$platform[1]`
+This file was automatically created via `the Repro package (version 0.1.0)` using  `r session$platform[1]`
+
 <!-- May I suggest running `repro::automate()`? This will create a `Dockerfile` & `Makefile` based on every RMarkdown in this folder and the special yamls in them. date: "`r format(Sys.time(), '%d %B, %Y')`" -->
 <!-- add ENV DEBIAN_FRONTEND=noninteractive -->
-<!-- If you are unsure weather or not you have `git` `make` & `docker`. -->
-  
-```{r check, eval=TRUE}
+
+
+
+```{r options, results='hide', message=FALSE, warning=FALSE}
+niter = 5000; warm = 1000; chains = 4; cores = 4 # number of iterations (to change if you want to quick check and warmups #or also parallel::detectCores()/2)
+options(scipen = 666, warn=-1, contrasts=c("contr.sum","contr.poly"), mc.cores = cores); cl <- cores  #remove scientific notation # remove warnings #set contrasts to sum !
+ #parallel::detectCores()/2
+set.seed(666) #set random seed
+control = lmerControl(optimizer ='optimx', optCtrl=list(method='nlminb')) #set "better" lmer optimizer #nolimit # yoloptimizer
+#emm_options(pbkrtest.limit = 8000) #increase repetitions limit for frequentist stats
+
+source('R/plots.R', echo=F)# plot specification
+source('R/utils.R', echo=F)# useful functions
+
+panderOptions('knitr.auto.asis', FALSE) #remove auto styling
+
+# Look at R/clean.R (listed in the YAML) which does all the preprocessing for more info
+
+
+# If you are unsure weather or not you have `git` `make` & `docker`.
 # check_git()
 # check_make()
 # check_docker()
 ```
 
-```{css, echo=FALSE}
-caption, .caption{
-  font-style:italic;
-  margin-top:0.5em;
-  margin-left:-0.5em;
-  margin-bottom:0.5em;
-  width:80%;} 
-```
-
-```{r options, echo=FALSE, include=FALSE}
-options(scipen = 666, warn=-1, contrasts=c("contr.sum","contr.poly")) #remove scientific notation # remove warnings #set contrasts to sum !
-set.seed(666) #set random seed
-control = lmerControl(optimizer ='optimx', optCtrl=list(method='nlminb')) #set "better" lmer optimizer #nolimit # yoloptimizer
-emm_options(pbkrtest.limit = 5000) #increase repetitions limit
-source('R/plots.R', echo=F)# plot specification
-source('R/utils.R', echo=F)# useful functions
-```
-
 ```{r clean, echo=FALSE, include=FALSE}
-# this chunk runs R/clean.R (listed in the YAML)
+# this chunk runs R/clean.R (listed in the YAML) which does all the preprocessing
 ```
 ## Description
 
 Parametric Bootstrap Test method to evaluate significance of fixed effects in mixed-effects models (using MLE fit, nsim = 5000) and Bayes Factor from mixed models (see Wagenmakers, 2007)
 
 ### Demographics
-
 ```{r demographics}
 egltable(c("BMI", "AGE", "GENDER"), 
   g = "intervention", data = df, strict = FALSE) %>%
@@ -111,25 +127,28 @@ ggplot(med)+
 
 ```
 \
-Using penalized (lasso) maximum likelihood for variable selection (cv.glmnet), i.e. finding the minimum lambda (regularization parameter) to infer the best number of features to use in order to simplify the model and avoid  overfitting.\
-Using that because: \
-- Handles the problem of correlated inputs
-- Perform better than stepwise selection
+
 ```{r var_sel, echo=FALSE, include=T, cached=T,fig.align="center"}
-x<-model.matrix(intervention~.,data=dfmed); x=x[,-1]
 
-fit<-cv.glmnet(x=x,y=dfmed$intervention,family ="binomial",type.measure='deviance',nfolds=5,alpha=.5)
-plot(fit)
+#1) with Recursive Feature Eliminations (CARET)
+set.seed(666)
 
-c<-coef(fit,s='lambda.min',exact=TRUE)
-inds<-which(c!=0)
-variables<-row.names(c)[inds]
-variables<-variables[!variables %in% '(Intercept)']; variables
-#"BW_diff"     "BMI_diff"       "X2.AG_diff"   "reelin_diff"   "MCP_diff"   "TNFalpha_diff"  "GLP_diff"    "Glu_diff"  
+sizes = 1:length(dfmed[c(-1)])
+len = length(sizes)
+seeds <- vector(mode = "list", length = len)
+for(i in 1:(len-1)) seeds[[i]]<- sample.int(n=10000, size = length(sizes)+1)
+# for the last model
+seeds[[len]]<-sample.int(10000, 1)
+
+RFEcontrol <- rfeControl(functions=rfFuncs, method="cv", number=10, seeds= seeds) # control options
+
+rfeResults = rfe(x = dfmed[c(-1)], y = dfmed$intervention, sizes=sizes, rfeControl=RFEcontrol)
+predictors(rfeResults)
+plot(rfeResults, type=c("g", "o")) # look for the "elbow"
 
 ```
 
-#### Mediation analysis (biomedical)
+## Mediation analysis (biomedical)
 ```{r mediate, echo=FALSE, include=F}
 df$Intervention = as.numeric(df$intervention)
 # medi =  psych::mediate(weightLoss ~ Intervention + (Date_diff) + (GLP_diff) + (reelin_diff) + (Glu_diff), data = df, n.iter = 10000, plot=F) 
@@ -226,7 +245,7 @@ print(plt)
 dev.off()
 ```
 
-## Pavlvovian Conditioning Task (Latency)
+# Pavlvovian Conditioning Task (Latency)
 Latency = time to detect the target (ms) &  condition = CS+ or CS- \
 ```{r PAV_RT, echo=FALSE, include=FALSE, cache=TRUE, warning=FALSE}
 # -------------------------------------- RT
@@ -401,7 +420,7 @@ print(plt)
 dev.off()
 ```
 
-## Instrumental Conditioning Task (Analysis)
+# Instrumental Conditioning Task (Analysis)
 grips = number of times participant exceeded the force threshold to acquire the reward (Milkshake)
 spline = first 5 trials (1st degree), last 20 trials (2nd degree)
 
@@ -564,7 +583,7 @@ print(plt)
 dev.off()
 ```
 
-## PIT (Pavlovian-Instrumental Transfer) Task
+# PIT (Pavlovian-Instrumental Transfer) Task
 Mobilized effort = Area Under the Curve (AUC) of the force exerted exceeding the delivery threshold during Pavlvovian cue presentation
 condition = CS+ or CS-
 ```{r PIT, echo=FALSE, include=FALSE, cache=TRUE, warning=F}
@@ -653,7 +672,7 @@ print(plt)
 dev.off()
 ```
 
-## Hedonic Reactivity Test 
+# Hedonic Reactivity Test 
 Perceived liking = how pleasant is the liquid solution rated (0-100, with repetitions)   &   condition = Milshake or Tasteless   &   intensity = difference on how intense the liquid solution were rated 
 ```{r HED, echo=FALSE, include=FALSE, cache=TRUE, warning=F}
 measurevar = "lik"
@@ -776,7 +795,7 @@ res[c(1,4,6,3,5)]  %>% kbl(digits = 2, escape = F,row.names = F)  %>%
 #print('PES: intervention: Overall higher weight loss for treament (Liraglutide) group')
 #PES.weight[1,]
 ```
-```{r message = FALSE, echo=FALSE, results='hide', fig.show="hold", out.width="25%", fig.align="center", fig.cap = 'Model assumptions.'}
+```{r message = FALSE, echo=FALSE, results='hide', fig.show="hold", out.width="25%", fig.align="center", fig.cap = 'Model assumptions.', warning=F}
 mod = lm(HF_inter ~ intervention + BMI_diff + age, data = inter)
 x = plot_model(mod, type = "diag")
 x[c(2,3,4,1)]
@@ -784,7 +803,7 @@ x[c(2,3,4,1)]
 ```
 \
 \
-```{r HED_fmri_plot, echo=FALSE,  message=FALSE, cache=TRUE, fig.align="right", fig.cap="Beta estimates from hippocampal formation during Hedonic reactivity test (Post > Pre) by intervention and correlation with weight loss."}
+```{r HED_fmri_plot, echo=FALSE,  message=FALSE, cache=TRUE, fig.align="right", fig.cap="Beta estimates from hippocampal formation during Hedonic reactivity test (Post > Pre) by intervention and correlation with weight loss.", warning=F}
 sp = ggplot(inter, aes(x = `Weight Loss`, y = HF_inter, color = intervention)) +
   stat_ellipse(aes(group=intervention)) +  geom_point(alpha = .3, size = 3) + 
   geom_smooth(method= lm,aes(color = NULL), alpha = 0.5 ) +
@@ -838,7 +857,7 @@ par(mar=c(0,0,0,0)); psych::mediate.diagram(medi, show.c = F, main= "", ylim=c(4
 text(3, 6.5, "A ***",  cex = .8); text(7, 6.5, "B *",  cex = .8);  text(5.8, 4.9, "***",  cex = .8); text(5, 6.7, "AB *",  cex = .8)
 ```
 \
-```{r HED_fmri_plot_HF, echo=FALSE,  message=FALSE, cache=TRUE, fig.align="right", fig.cap="Beta estimates from hippocampal formation during Hedonic reactivity testby session by intervention."}
+```{r HED_fmri_plot_HF, echo=FALSE,  message=FALSE, cache=TRUE, fig.align="right", fig.cap="Beta estimates from hippocampal formation during Hedonic reactivity testby session by intervention.", warning=F}
 # AVERAGED EFFECT -------------
 dfH <- summarySEwithin(HED_fMRI,
                        measurevar = "HF_score",
