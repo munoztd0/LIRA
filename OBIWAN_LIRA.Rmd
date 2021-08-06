@@ -23,11 +23,7 @@ repro:
     medic: data/medic.csv
     HED_fMRI: data/HED_fmri.csv
     
-<<<<<<< HEAD
-  packages: [ aaronpeikert/repro@devel, crsh/papaja@devel, tinylabels, apaTables, MBESS, afex, ggplot2, ggpubr, Rmisc, emmeans, tidyr, BayesFactor, bayestestR, devtools, lspline, kableExtra, sjPlot, knitr, XML, rlist, janitor, optimx, ggthemes, dplyr, JWileymisc, corrplot, glmnet, intmed, stringr, cowplot ]
-=======
-  packages: [ aaronpeikert/repro@devel, crsh/papaja@devel, tinylabels, apaTables, MBESS, afex, ggplot2, ggpubr, Rmisc, emmeans, tidyr, BayesFactor, bayestestR, devtools, lspline, kableExtra, sjPlot, knitr, XML, rlist, janitor, optimx, ggthemes, dplyr, JWileymisc, corrplot, glmnet, intmed, stringr, cowplo, pander]
->>>>>>> 42279c50827469e90e4fe33c2e4f7c599ff95c43
+  packages: [ aaronpeikert/repro@devel, crsh/papaja@devel, tinylabels, apaTables, MBESS, afex, ggplot2, ggpubr, Rmisc, emmeans, tidyr, BayesFactor, bayestestR, devtools, lspline, kableExtra, sjPlot, knitr, XML, rlist, janitor, optimx, ggthemes, dplyr, JWileymisc, corrplot, caret, intmed, stringr, cowplot, pander, psych]
   scripts: R/clean.R
   apt:
     - libgsl0-dev
@@ -66,7 +62,7 @@ x = session_info();  opts_chunk$set(echo = FALSE, warning = FALSE, message = FAL
 sessio = session_info(); #opts_chunk$set(echo = F, message=F, warning=F) # set echo F for all
 ```
 
-This file was automatically created via `the Repro package (version 0.1.0)` using  `r session$platform[1]`
+This file was automatically created via `the Repro package (version 0.1.0)` using  `r sessio$platform[1]`
 
 <!-- May I suggest running `repro::automate()`? This will create a `Dockerfile` & `Makefile` based on every RMarkdown in this folder and the special yamls in them. date: "`r format(Sys.time(), '%d %B, %Y')`" -->
 <!-- add ENV DEBIAN_FRONTEND=noninteractive -->
@@ -74,9 +70,9 @@ This file was automatically created via `the Repro package (version 0.1.0)` usin
 
 
 ```{r options, results='hide', message=FALSE, warning=FALSE}
-niter = 5000; warm = 1000; chains = 4; cores = 4 # number of iterations (to change if you want to quick check and warmups #or also parallel::detectCores()/2)
-options(scipen = 666, warn=-1, contrasts=c("contr.sum","contr.poly"), mc.cores = cores); cl <- cores  #remove scientific notation # remove warnings #set contrasts to sum !
- #parallel::detectCores()/2
+niter = 500; warm = 100; chains = 4; cores = 4; nsim = 10000 # number of iterations (to change if you want to quick check and warmups #or also parallel::detectCores()/2)
+options(scipen = 666, warn=-1, contrasts=c("contr.sum","contr.poly"), mc.cores = cores);  #remove scientific notation # remove warnings #set contrasts to sum !
+ #cl = parallel::detectCores()/2
 set.seed(666) #set random seed
 control = lmerControl(optimizer ='optimx', optCtrl=list(method='nlminb')) #set "better" lmer optimizer #nolimit # yoloptimizer
 #emm_options(pbkrtest.limit = 8000) #increase repetitions limit for frequentist stats
@@ -87,7 +83,6 @@ source('R/utils.R', echo=F)# useful functions
 panderOptions('knitr.auto.asis', FALSE) #remove auto styling
 
 # Look at R/clean.R (listed in the YAML) which does all the preprocessing for more info
-
 
 # If you are unsure weather or not you have `git` `make` & `docker`.
 # check_git()
@@ -100,7 +95,7 @@ panderOptions('knitr.auto.asis', FALSE) #remove auto styling
 ```
 ## Description
 
-Parametric Bootstrap Test method to evaluate significance of fixed effects in mixed-effects models (using MLE fit, nsim = 5000) and Bayes Factor from mixed models (see Wagenmakers, 2007)
+<!-- Parametric Bootstrap Test method to evaluate significance of fixed effects in mixed-effects models (using MLE fit, nsim = 5000) and Bayes Factor from mixed models (see Wagenmakers, 2007) -->
 
 ### Demographics
 ```{r demographics}
@@ -132,77 +127,52 @@ ggplot(med)+
 ```
 \
 
+Recursive Feature Eliminations 
 ```{r var_sel, echo=FALSE, include=T, cached=T,fig.align="center"}
 
 #1) with Recursive Feature Eliminations (CARET)
-set.seed(666)
-<<<<<<< HEAD
 
-sizes = 1:length(dfmed[c(-1)])
-len = length(sizes)
+sizes = 1:length(dfmed[c(-1)]); len = length(sizes)
 seeds <- vector(mode = "list", length = len)
-for(i in 1:(len-1)) seeds[[i]]<- sample.int(n=1000, size = length(sizes)+1)
+for(i in 1:(len-1)) seeds[[i]]<- sample.int(n=nsim, size = length(sizes)+1)
 # for the last model
-seeds[[len]]<-sample.int(1000, 1)
+seeds[[len]]<-sample.int(nsim, 1)
 
-=======
-
-sizes = 1:length(dfmed[c(-1)])
-len = length(sizes)
-seeds <- vector(mode = "list", length = len)
-for(i in 1:(len-1)) seeds[[i]]<- sample.int(n=10000, size = length(sizes)+1)
-# for the last model
-seeds[[len]]<-sample.int(10000, 1)
-
->>>>>>> 42279c50827469e90e4fe33c2e4f7c599ff95c43
 RFEcontrol <- rfeControl(functions=rfFuncs, method="cv", number=10, seeds= seeds) # control options
 
 rfeResults = rfe(x = dfmed[c(-1)], y = dfmed$intervention, sizes=sizes, rfeControl=RFEcontrol)
 predictors(rfeResults)
 plot(rfeResults, type=c("g", "o")) # look for the "elbow"
-<<<<<<< HEAD
 
-# x<-model.matrix(intervention~.,data=dfmed); x=x[,-1]
-# 
-# fit<-cv.glmnet(x=x,y=dfmed$intervention,family ="binomial",type.measure='deviance',nfolds=5,alpha=.5)
-# plot(fit)
-# 
-# c<-coef(fit,s='lambda.min',exact=TRUE)
-# inds<-which(c!=0)
-# variables<-row.names(c)[inds]
-# variables<-variables[!variables %in% '(Intercept)']; variables
-=======
->>>>>>> 42279c50827469e90e4fe33c2e4f7c599ff95c43
+#if we agree that BMI, Body Weight and Waist Circumference actually measure the same thing, there only 4 other variables that are "useful" to separate the two groups :
+#Reelin and GLP
 
 ```
 
 ## Mediation analysis (biomedical)
 ```{r mediate, echo=FALSE, include=F}
 df$Intervention = as.numeric(df$intervention)
-# medi =  psych::mediate(weightLoss ~ Intervention + (Date_diff) + (GLP_diff) + (reelin_diff) + (Glu_diff), data = df, n.iter = 10000, plot=F) 
-# mediate.diagram(medi, show.c = F, main= "")
-#text(3.7, 6.2, "***",  cex = .8);  text(6, 4.7, "***",  cex = .8)  
-#summary(medi)
 
-med_res <- mediate(y = "weightLoss", med = c("X2.AG_diff" ,  "reelin_diff"  ,"MCP_diff" ), c = c("age","gender"), treat = "Intervention", ymodel = "regression", mmodel = c("regression", "regression", "regression"), treat_lv = 1, control_lv = 0, incint = TRUE, inc_mmint = FALSE, conf.level = 0.95, data = df, sim = 1000, complete_analysis = TRUE, digits = 3,  summary_report=F)
+parallel:::setDefaultClusterOptions(setup_strategy = "sequential")
 
-tables1 <- list.clean(readHTMLTable("res.html"), fun = is.null, recursive = FALSE)
+med_res <- intmed::mediate(y = "weightLoss", med = c("GLP_diff" ,  "reelin_diff"), c = c("age","gender"), treat = "Intervention", ymodel = "regression", mmodel = c("regression", "regression"), treat_lv = 1, control_lv = 0, incint = TRUE, inc_mmint = FALSE, conf.level = 0.95, data = df, sim = nsim, complete_analysis = TRUE, digits = 3,  summary_report=F)
 
-med_res <- mediate(y = "weightLoss", med = c( "TNFalpha_diff",  "GLP_diff" ,   "Glu_diff"  ), c = c("age","gender"), treat = "Intervention", ymodel = "regression", mmodel = c("regression", "regression", "regression" ), treat_lv = 1, control_lv = 0, incint = TRUE, inc_mmint = FALSE, conf.level = 0.95, data = df, sim = 1000, complete_analysis = TRUE, digits = 3, summary_report=F)
+table <- list.clean(readHTMLTable("res.html"), fun = is.null, recursive = FALSE); table = table[4]$`NULL`[1:6,]
 
-tables2 <- list.clean(readHTMLTable("res.html"), fun = is.null, recursive = FALSE)
 ```
 
 ```{r mediate_res, echo=FALSE, include=T}
-table = rbind(tables1[[4]][1:3,], tables2[[4]][1:5,])
-table$Estimates = unlist(str_split(gsub("[^0-9.,-]", "", table$Estimates), ","))
 
-table$`p-value` = as.numeric(table$`p-value`); table$`p-value` = ifelse(as.numeric(table$`p-value`) < 0.05,paste("<span style=\" font-weight: bold; \" >" ,sprintf("%.3f",table$`p-value`), "</span>"),  paste("<span>" ,sprintf("%.3f",table$`p-value`), "</span>"))
+#pander(table)
+colnames(table)[4] = "p"; table$p = as.numeric(table$p); table$p = ifelse(as.numeric(table$p) < 0.05,paste("<span style=\" font-weight: bold; \" >" ,sprintf("%.3f",table$p), "</span>"),  paste("<span>" ,sprintf("%.3f",table$p), "</span>")) # highlight p < 0.05
 
-colnames(table)[4] = "p"
+
 table %>%
   kbl(caption ="Mediation Analysis: DV = Weight loss, IV = Intervention", escape=F) %>%
   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F)
+
+#plot
+medi =  psych::mediate(weightLoss ~ Intervention + (GLP_diff) + (reelin_diff), data = df, n.iter = nsim, plot=F); psych::mediate.diagram(medi,show.c=FALSE)
 ```
 
 ## Weight Loss
