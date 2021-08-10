@@ -23,7 +23,7 @@ repro:
     medic: data/medic.csv
     HED_fMRI: data/HED_fmri.csv
     
-  packages: [ aaronpeikert/repro@devel, crsh/papaja@devel, tinylabels, apaTables, MBESS, afex, ggplot2, ggpubr, Rmisc, emmeans, tidyr, BayesFactor, bayestestR, devtools, lspline, kableExtra, sjPlot, knitr, XML, rlist, janitor, optimx, ggthemes, dplyr, JWileymisc, corrplot, caret, intmed, stringr, cowplot, pander, psych]
+  packages: [ aaronpeikert/repro@devel, crsh/papaja@devel, tinylabels, apaTables, MBESS, afex, ggplot2, ggpubr, Rmisc, emmeans, tidyr, BayesFactor, bayestestR, devtools, lspline, kableExtra, sjPlot, knitr, XML, rlist, janitor, optimx, ggthemes, dplyr, JWileymisc, corrplot, caret, intmed, stringr, cowplot, pander, psych, cmdstanr, brms, tidybayes]
   scripts: R/clean.R
   apt:
     - libgsl0-dev
@@ -100,7 +100,7 @@ panderOptions('knitr.auto.asis', FALSE) #remove auto styling
 ### Demographics
 ```{r demographics}
 egltable(c("BMI", "AGE", "GENDER"), 
-  g = "intervention", data = df, strict = FALSE) %>%
+  g = "INTERVENTION", data = df, strict = FALSE) %>%
   kbl(caption ="Summary statistics", digits = 2) %>%
   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%
   row_spec(0,bold=T,align='c')
@@ -112,7 +112,7 @@ egltable(c("BMI", "AGE", "GENDER"),
 
 # Boxplot of biomedical variables per group
 ggplot(med)+
-  geom_boxplot(aes(intervention, n))+
+  geom_boxplot(aes(INTERVENTION, n))+
   facet_wrap(~feature, scales = "free")+
   labs(title = "")+
   theme_fivethirtyeight()+
@@ -151,13 +151,12 @@ plot(rfeResults, type=c("g", "o")) # look for the "elbow"
 
 ## Mediation analysis (biomedical)
 ```{r mediate, echo=FALSE, include=F}
-df$Intervention = as.numeric(df$intervention)
 
 parallel:::setDefaultClusterOptions(setup_strategy = "sequential")
 
-med_res <- intmed::mediate(y = "weightLoss", med = c("GLP_diff" ,  "reelin_diff"), c = c("age","gender"), treat = "Intervention", ymodel = "regression", mmodel = c("regression", "regression"), treat_lv = 1, control_lv = 0, incint = TRUE, inc_mmint = FALSE, conf.level = 0.95, data = df, sim = nsim, complete_analysis = TRUE, digits = 3,  summary_report=F)
+med_res <- intmed::mediate(y = "weightLoss", med = c("GLP_diff" ,  "reelin_diff"),  treat = "intervention", ymodel = "regression", mmodel = c("regression", "regression"), treat_lv = 1, control_lv = 0, incint = TRUE, inc_mmint = FALSE, conf.level = 0.95, data = df, sim = nsim, complete_analysis = TRUE, digits = 3,  summary_report=F) #c = c("age","gender"),
 
-table <- list.clean(readHTMLTable("res.html"), fun = is.null, recursive = FALSE); table = table[4]$`NULL`[1:6,]
+table <- list.clean(readHTMLTable("res.html"), fun = is.null, recursive = FALSE); table = table[3]$`NULL`[1:6,]
 
 ```
 
@@ -165,64 +164,179 @@ table <- list.clean(readHTMLTable("res.html"), fun = is.null, recursive = FALSE)
 
 #pander(table)
 colnames(table)[4] = "p"; table$p = as.numeric(table$p); table$p = ifelse(as.numeric(table$p) < 0.05,paste("<span style=\" font-weight: bold; \" >" ,sprintf("%.3f",table$p), "</span>"),  paste("<span>" ,sprintf("%.3f",table$p), "</span>")) # highlight p < 0.05
+table$p = ifelse(table$p == '<span style=" font-weight: bold; " > 0.000 </span>', "<span style=\" font-weight: bold;    \" >\u003C 0.001</span>", table$p)
 
 
 table %>%
   kbl(caption ="Mediation Analysis: DV = Weight loss, IV = Intervention", escape=F) %>%
   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F)
 
-#plot
-medi =  psych::mediate(weightLoss ~ Intervention + (GLP_diff) + (reelin_diff), data = df, n.iter = nsim, plot=F); psych::mediate.diagram(medi,show.c=FALSE)
+#just for plot purpose (because not the same exact analysis)
+medi =  psych::mediate(weightLoss ~ intervention + (GLP_diff) + (reelin_diff), data = df, n.iter = nsim, plot=F); psych::mediate.diagram(medi, show.c=FALSE)
 ```
 
-## Weight Loss
-```{r weigth_loss, echo=FALSE, include=FALSE, cache=TRUE}
-formula = 'weightLoss ~ intervention + gender + age  + Date_diff + Error(id)'
+### Weight Loss
+```{r weigth_loss,  include=FALSE, cache=F}
 
+# Model
+mf = formula(weightLoss ~ intervention + gender + age + GLP_diff + reelin_diff  + (1|id))
 
-mdl.weight = aov_car(as.formula(formula), data = df, factorize = FALSE,  anova_table = list(correction = "GG", es = "pes"),type = "II")
-res = nice(mdl.weight, MSE = F); ref_grid(mdl.weight); res
+# -------------------------------------- Bayesian Regression Models using Stan -------------------------------------
+# STAN is a probabilistic programming language that allows you to get full Bayesian statistical inference with MCMC sampling.
+bmod_full = brm(mf, data=df, family = gaussian, prior = c(prior(normal(0, 3), class = "b", coef = ""), prior(normal(0, 100), class = "Intercept", coef = "")), sample_prior = T, save_pars = save_pars(all = TRUE), chains = chains,  iter = niter, warmup = warm, seed = 123, inits = 1, backend = 'cmdstanr', threads = threading(4)) # a lot to unwind here..  1) Generic informative prior around 0 for fixed effects and weak prior for the intercept 2) we need to sample priors and save parameters for computing BF  
 
-PES.weight = pes_ci(as.formula(formula), data = df, conf.level = .90, factorize = FALSE, anova.type = "II", epsilon="none") ; 
-mdl.weight.emms = emmeans(mdl.weight, pairwise ~ intervention)
-
-```
-```{r weight_res}
-res$p.value = as.numeric(res$p.value)
-res$p.value = ifelse(res$p.value < 0.05,paste("<span style=\" font-weight: bold; \" >" ,sprintf("%.3f",res$p.value), "</span>"),  paste("<span>" ,sprintf("%.3f",res$p.value), "</span>"))
-
-res$F = unlist(str_split(gsub("[^0-9.,-]", "", res$F), ","));res$pes = unlist(str_split(gsub("[^0-9.,-]", "", res$pes), ","));
-res$`90% CI` = paste(sprintf("%.3f",PES.weight[,2]), "-", sprintf("%.3f",PES.weight[,3]))
-
-res$p.value[1]= "<span style=\" font-weight: bold;    \" >\u003C 0.001</span>"
-res$pes[4]= "\u003C 0.001"
-colnames(res)[3:5] = c( paste("F(", res$df[1], ")", sep=""),"&eta;<sub>p</sub><sup>2</sup>", "p")
-res[c(1,4,6,3,5)]  %>% kbl(digits = 2, escape = F) %>%
-  kable_styling(latex_options = "striped", position = "center", full_width = F) 
-#print('PES: intervention: Overall higher weight loss for treament (Liraglutide) group')
-#PES.weight[1,]
+#lmer to compare
+fmod_full = lm(update(mf, ~.- (1|id)) , data = df)
 ```
 
-```{r message = FALSE, echo=FALSE, results='hide', fig.show="hold", out.width="25%", fig.align="center", fig.cap = 'Model assumptions.', warning =FALSE}
-mod = lm(weightLoss ~ intervention + gender + age  + Date_diff, data = df)
-x = plot_model(mod, type = "diag")
-x[c(2,3,4,1)]
- #check assumptions
+```{r message = FALSE, results='hide', fig.align="center", out.width = "100%", dpi = 200}
+
+## plot population-level effects posterior distributions and chain sampling
+
+param = mcmc_plot(object = bmod_full, pars =c("b_.*en", "b_.*ge"), type ="areas")
+
+trace = mcmc_plot(object = bmod_full, pars =c("b_.*en", "b_.*ge"), type ="trace")
+
+
+#check assumptions
+var_group = pp_check(bmod_full, type = "stat_grouped", group = "intervention", binwidth = 0.1, nsamples = NULL) #equality of variance between groups
+
+rep_fit = pp_check(bmod_full, nsamples = 100) # check response fit
+
+error = pp_check(bmod_full, type ="error_scatter_avg", nsamples = NULL) # check good alignment between model and data, and no obvious pattern to the types of errors we are getting.
+
+
+#Normality of errors
+residuals <-residuals(bmod_full)[, 1]; res <- qqnorm(residuals, pch = 1, plot.it=F)
+
+lmx = plot_model(fmod_full, type = "diag"); #diagnostic plots for lmer
+
+#plot all
+diagRT <- ggarrange(param, var_group, rep_fit, error, ncol = 2, nrow = 2)
+
+annotate_figure(diagWEIGHT, top = text_grob("Diagnostic Plots", face = "bold", size = 10))
 ```
+
+
+
+```{r WEIGHT_tab, include=FALSE, cache=F}
+
+full_tab = describe_posterior(bmod_full,
+                   estimate = "median", dispersion = T,
+                   ci = .9, ci_method = "hdi",
+                   bf_prior = bmod_full, diagnostic = "Rhat",  
+                   test = c("p_direction", "bf"))
+
+full_tab = filter(full_tab, Parameter %notin% c("b_Intercept", "prior_sigma"))
+
+
+
+# -------------------------------------- FREQUENTIST STATS: AOV -----------------------------------------------
+
+# formula = 'weightLoss ~ intervention + gender + age  + Error(id)'
+# 
+# 
+# mdl.weight = aov_car(as.formula(formula), data = df, factorize = FALSE,  anova_table = list(correction = "GG", es = "pes"),type = "II")
+# res = nice(mdl.weight, MSE = F); ref_grid(mdl.weight); res
+# 
+# PES.weight = pes_ci(as.formula(formula), data = df, conf.level = .90, factorize = FALSE, anova.type = "II", epsilon="none") ; 
+# mdl.weight.emms = emmeans(mdl.weight, pairwise ~ intervention)
+
+
+# res$p.value = as.numeric(res$p.value)
+# res$p.value = ifelse(res$p.value < 0.05,paste("<span style=\" font-weight: bold; \" >" ,sprintf("%.3f",res$p.value), "</span>"),  paste("<span>" ,sprintf("%.3f",res$p.value), "</span>"))
+# 
+# res$F = unlist(str_split(gsub("[^0-9.,-]", "", res$F), ","));res$pes = unlist(str_split(gsub("[^0-9.,-]", "", res$pes), ","));
+# res$`90% CI` = paste(sprintf("%.3f",PES.weight[,2]), "-", sprintf("%.3f",PES.weight[,3]))
+# 
+# res$p.value[1]= "<span style=\" font-weight: bold;    \" >\u003C 0.001</span>"
+# colnames(res)[3:5] = c( paste("F(", res$df[1], ")", sep=""),"&eta;<sub>p</sub><sup>2</sup>", "p")
+# res[c(1,4,6,3,5)]  %>% kbl(digits = 2, escape = F) %>%
+#   kable_styling(latex_options = "striped", position = "center", full_width = F) 
+
+# -------------------------------------- Regression table summary --------------------------------------
+
+tab_model(bmod_full, show.p = F, show.intercept = F, show.se = T, title ="", show.re.var = F, digits = 3, dv.labels = "Weight Loss (\u0394 BMI)", file = "tmp/temp1.html", transform = NULL,  rm.terms = "beta")
+
+report = capture.output(sexit(bmod_full, ci=.9))
+
+```
+
+
+```{r WEIGHT_res}
+
+print(paste("Bayesian linear mixed model (estimated using MCMC sampling with " ,chains ," chains of", niter, " iterations and a warmup of", warm, ") to predict weightLoss with intervention, gender, age, GLP_diff and reelin_diff (formula: weightLoss ~ intervention + gender + age + GLP_diff + reelin_diff). The model included id as random effect (formula: ~1 | id). Priors over parameters were set as normal (mean = 0.00, SD = 3.00), normal (mean = 0.00, SD = 3.00), normal (mean = 0.00, SD = 3.00), normal (mean = 0.00, SD = 3.00), normal (mean = 0.00, SD = 3.00) and student_t (location = 0.00, scale = 2.50) distributions"))
+            
+
+full_tab
+
+report[4]
+
+tables <- list.clean(readHTMLTable("tmp/temp1.html"), fun = is.null, recursive = FALSE)
+tables2 = tables[[1]] %>% janitor::row_to_names(row_number = 1)
+tables2 <- as.matrix(tables2) %>% as_tibble();
+
+
+tables2[is.na(tables2)] <- "";  names(tables2) <- NULL; tmp = t(tables2[(length(full_tab$Parameter)+1):(length(full_tab$Parameter)+4),1:2]);
+tmp[,4][1] = "R2"; tmp[,4][2] = gsub(".*/","",tmp[,4][2]); colnames(tmp) =  tmp[1,]
+pander:: pander(tmp[2,])
+
+
+```
+
+#### Plot Weight Loss {-}
 
 ```{r Weight_Loss, echo=FALSE, warning=FALSE, cache=TRUE, fig.align="center", fig.cap="Weight Loss by intervention."}
-dfR <- summarySE(df, measurevar = "weightLoss",
-                 groupvars = "intervention")
 
-dfR$cond <- ifelse(dfR$intervention == "Liraglutide", -0.25, 0.25)
-df$cond <- ifelse(df$intervention == "Liraglutide", -0.25, 0.25)
+
+dfdraws = bmod_full %>%
+    spread_draws(`b_intervention` )
+
+
+HDI_weight = plotHDI( dfdraws$`b_intervention` , credMass = .90, binSize = 100, Title = "") + theme_bw() + html_theme  
+
+
+dfdraws2 =  bmod_full %>%
+     emmeans(~ intervention) %>%
+     gather_emmeans_draws() 
+
+
+pp = dfdraws2 %>%
+    ggplot(aes(x = as.factor(intervention) , y = .value,  fill = as.factor(intervention))) +
+    geom_abline(slope= 0, intercept=0, linetype = "dashed", color = "black") +
+    stat_slab(.width = c(0.50, 0.9), position="dodge", alpha=0.5) +
+    stat_pointinterval(.width = c(0.50, 0.9),position="dodge") +
+    labs(x = "",y = "Weight Loss (\u0394 BMI)", title = "") + 
+    scale_fill_manual(values=c("-1" = pal[1],"1"=pal[6]), guide="none") +
+    scale_color_manual( values=c("-1" = pal[1],"1"=pal[6]), guide="none") +
+    scale_x_discrete(labels=c("Placebo", "Liraglutide")) +
+  #scale_y_continuous(expand = c(0, 0), breaks = c(seq.int(400,550, by = 50)), limits = c(380,575)) +
+    theme_bw()
+
+plt_bayes_html = pp + html_theme 
+plt_bayes = pp + averaged_theme 
+
+
+figureWL <- ggarrange(plt_bayes_html, HDI_weight,
+                    labels = c("A", "B"),
+                    ncol = 2)
+figureWL
+
+
+
+
+dfR <- summarySE(df, measurevar = "weightLoss",
+                 groupvars = "INTERVENTION")
+
+dfR$cond <- ifelse(dfR$INTERVENTION == "Liraglutide", -0.25, 0.25)
+df$cond <- ifelse(df$INTERVENTION == "Liraglutide", -0.25, 0.25)
 df <- df %>% mutate(condjit = jitter(as.numeric(cond), 0.3),
                     grouping = interaction(id, cond))
 
 pp <- ggplot(df, aes(x = cond, y = weightLoss, 
-                     fill = intervention, color = intervention)) +
+                     fill = INTERVENTION, color = INTERVENTION)) +
   geom_hline(yintercept=0, linetype="dashed", size=0.4, alpha=0.8) +
-  geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(fill = intervention, color = NA))+
+  geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(fill = INTERVENTION, color = NA))+
   geom_point(aes(x = condjit), alpha = .3,) +
   geom_crossbar(data = dfR, aes(y = weightLoss, ymin=weightLoss-se, ymax=weightLoss+se), width = 0.2 , alpha = 0.1)+
   ylab('Weight loss (\u0394 BMI)')+xlab('')+
@@ -233,13 +347,17 @@ pp <- ggplot(df, aes(x = cond, y = weightLoss,
   theme_bw() 
 
 plt = pp + averaged_theme 
-pp + html_theme 
+#pp + html_theme 
 ```
 \
 \
 ```{r weight_saveFIG, include=FALSE}
-cairo_pdf('figures/Figure_WeightLoss_Lira.pdf')
+cairo_pdf('figures/Figure_WL_Lira.pdf')
 print(plt)
+dev.off()
+
+cairo_pdf('figures/Figure_WL_Lira_Bayes.pdf')
+print(figureWL)
 dev.off()
 ```
 

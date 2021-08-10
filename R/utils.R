@@ -309,3 +309,43 @@ facID = function(x){
 #   x[is.na(x)] <- 0 
 #   return(x)
 # }
+
+
+
+
+# bayes -------------------------------------------------------------------
+
+
+
+
+
+plotHDI <- function(sample   = NULL,
+                    credMass = 0.95,
+                    Title    = NULL,
+                    xLab     = "Value",
+                    yLab     = "Density",
+                    fontSize = NULL,
+                    binSize  = 30,
+                    ...) {
+  
+  # To pass R CMD Checks (serves no other purpose than to create binding)
+  ..density.. <- NULL
+  
+  HDI <- hBayesDM::HDIofMCMC(as.vector(t(sample)), credMass = credMass)  # 'sample' w/ data.frame class is also fine..
+  sample_df <- data.frame(sample)
+  
+  h1 <- ggplot(sample_df, aes(x = sample)) +
+    ggplot2::theme_bw() +
+    geom_histogram(aes(y = ..density..), colour = "grey", fill = "blue", alpha = 0.3, bins = binSize, ...) +
+    ggtitle(Title) + xlab("Estimate") + ylab(yLab) +
+    geom_segment(aes(x = HDI[1], y = 0, xend = HDI[2], yend = 0), size = 1.5, colour = "darkblue") +
+    theme(axis.text.x = ggplot2::element_text(size = fontSize)) +
+    theme(axis.text.y = ggplot2::element_text(size = fontSize)) +
+    theme(axis.title.y = ggplot2::element_text(size = fontSize)) +
+    theme(axis.title.x = ggplot2::element_text(size = fontSize)) +
+    theme(plot.title = ggplot2::element_text(size = fontSize))
+  
+  #print(paste0(credMass*100, "% Highest Density Interval (HDI):"))
+  #print(paste0("Lower bound = ", round(HDI[1], 4), ", Upper bound = ", round(HDI[2], 4)))
+  return(h1)
+}
