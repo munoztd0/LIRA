@@ -69,12 +69,16 @@ PAV = PAV.clean
 fac <- c("id", "trial", "condition", "session", "intervention","trialxcondition", "gender"); PAV[fac] <- lapply(PAV[fac], factor)
 
 #revalue all catego
-PAV$session = as.factor(revalue(PAV$session, c(second="0", third="1"))) #change value of session
-PAV$condition = as.factor(revalue(PAV$condition, c(CSminus="-1", CSplus="1"))); #PAV$condition <- factor(PAV$condition, levels = c("1", "-1"))#change value of condition
+PAV$session = PAV$session = ifelse(PAV$session == "second", -1, 1)
+  #as.factor(revalue(PAV$session, c(second="-1", third="1"))) #change value of session
+PAV$condition = ifelse(PAV$condition == "CSminus", -1, 1) 
+PAV$intervention = ifelse(PAV$intervention == "0", -1, 1)  #change value of intervention
+#PAV$condition = as.factor(revalue(PAV$condition, c(CSminus="-1", CSplus="1")));
 
-PAV.means <- aggregate(PAV[,c(covariate, "weightLoss", "age", "ageF", "BMI_V1", "bmi1", "liking", "RT")] , by = list(PAV$id, PAV$condition,PAV$session,PAV$intervention, PAV$gender), FUN = 'mean',na.action = na.omit)
 
-colnames(PAV.means) <- c('id','condition','session','intervention', 'gender', covariate,"weightLoss","age", "ageF", "BMI_V1", "bmi1", "liking", "RT")
+PAV.means <- aggregate(PAV[,c(covariate, "weightLoss", "ageF",  "bmi1", "liking", "RT")] , by = list(PAV$id, PAV$condition,PAV$session,PAV$intervention, PAV$gender), FUN = 'mean',na.action = na.omit)
+
+colnames(PAV.means) <- c('id','condition','session','intervention', 'gender', covariate,"weightLoss", "ageF", "bmi1", "liking", "RT")
 
 
 #imput mean (0) for the two covariate (MAR) so we can get BF (missing values fot 2 participant 262 and 232)
@@ -85,10 +89,14 @@ INST$Trial = as.numeric(INST$trial)
 x = lspline(INST$Trial, 5); INST$Trial1 = x[,1]; INST$Trial2 = x[,2]; 
 
 # define as.factors
-fac <- c("id", "trial", "session", "intervention", "gender"); INST[fac] <- lapply(INST[fac], factor)
+fac <- c("id", "session", "intervention", "gender"); INST[fac] <- lapply(INST[fac], factor)
 
 #revalue all catego
-INST$session = as.factor(revalue(INST$session, c(second="0", third="1"))) #change value of session
+INST$session = INST$session = ifelse(INST$session == "second", -1, 1)
+#as.factor(revalue(PAV$session, c(second="-1", third="1"))) #change value of session
+INST$intervention = ifelse(INST$intervention == "0", -1, 1)  #change value of intervention
+# INST$session = as.factor(revalue(INST$session, c(second="0", third="1"))) #change value of session
+
 INST.means <- aggregate(INST[,c(covariate, "grips")] , by = list(INST$trial, INST$session,INST$intervention, INST$gender), FUN = 'mean',na.action = na.omit)
 colnames(INST.means) <- c('trial','session','intervention', 'gender', covariate, "grips")
 
@@ -181,7 +189,7 @@ save(dfHED, file = "data/HED_fmri.Rdata")
 df = subset(PAV.means, session == "1"); df = subset(df, condition == "1")
 df$AGE = df$ageF; df$BMI = df$bmi1 ; df$GENDER = df$gender; df$INTERVENTION = df$intervention
 df$intervention = ifelse(df$intervention == 0, -1, 1) #change value of intervention
-df$gender = ifelse(df$gender == 0, -1, 1) #change value of intervention
+df$gender = ifelse(df$gender == 0, -1, 1) #change value of gender
 
 df$INTERVENTION = as.factor(revalue(as.factor(df$INTERVENTION), c("0"="Placebo", "1"="Liraglutide")))#using pav.means but oculd be any other
 df$GENDER = as.factor(revalue(as.factor(df$GENDER), c("0"="Men", "1"="Women")))
