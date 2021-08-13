@@ -72,6 +72,7 @@ fac <- c("id", "trial", "condition", "session", "intervention","trialxcondition"
 PAV$session = PAV$session = ifelse(PAV$session == "second", -1, 1)
   #as.factor(revalue(PAV$session, c(second="-1", third="1"))) #change value of session
 PAV$condition = ifelse(PAV$condition == "CSminus", -1, 1) 
+PAV$gender = ifelse(PAV$gender == "0", -1, 1) 
 PAV$intervention = ifelse(PAV$intervention == "0", -1, 1)  #change value of intervention
 #PAV$condition = as.factor(revalue(PAV$condition, c(CSminus="-1", CSplus="1")));
 
@@ -92,13 +93,16 @@ x = lspline(INST$Trial, 5); INST$Trial1 = x[,1]; INST$Trial2 = x[,2];
 fac <- c("id", "session", "intervention", "gender"); INST[fac] <- lapply(INST[fac], factor)
 
 #revalue all catego
+INST$gender = INST$gender = ifelse(INST$gender == "0", -1, 1)
 INST$session = INST$session = ifelse(INST$session == "second", -1, 1)
 #as.factor(revalue(PAV$session, c(second="-1", third="1"))) #change value of session
 INST$intervention = ifelse(INST$intervention == "0", -1, 1)  #change value of intervention
 # INST$session = as.factor(revalue(INST$session, c(second="0", third="1"))) #change value of session
 
-INST.means <- aggregate(INST[,c(covariate, "grips")] , by = list(INST$trial, INST$session,INST$intervention, INST$gender), FUN = 'mean',na.action = na.omit)
-colnames(INST.means) <- c('trial','session','intervention', 'gender', covariate, "grips")
+# get the averaged dataset
+INST.means <- aggregate(INST[,c(covariate, "grips")] , by = list(INST$id,INST$trial, INST$session,INST$intervention, INST$gender), FUN = 'mean',na.action = na.omit)
+
+colnames(INST.means) <- c('id','trial','session','intervention', 'gender', covariate, "grips")
 
 #imput mean (0) for the two covariate (MAR) so we can get BF (missing values for 3 participant 239, 258, 231)
 INST.means$thirsty[is.na(INST.means$thirsty)] <- 0 ; INST.means$hungry[is.na(INST.means$hungry)] <- 0 
@@ -112,16 +116,22 @@ dfTrial$phasis = ifelse(dfTrial$Trial >	-1.07212710 , "1", "0")
 dfTrial$T2 = ifelse(dfTrial$Trial > 0, dfTrial$Trial^2, -dfTrial$Trial^2)
 
 # clean PIT --------------------------------------------------------------
-PIT = subset(PIT, condition != "BL")
 
 # define as.factors
 fac <- c("id", "trial", "condition", "session", "intervention","trialxcondition", "gender"); PIT[fac] <- lapply(PIT[fac], factor)
 
-#revalue all catego
-PIT$session = as.factor(revalue(PIT$session, c(second="0", third="1"))) #change value of session
-PIT$condition = as.factor(revalue(PIT$condition, c(CSminus="-1", CSplus="1"))); #PIT$condition <- factor(PIT$condition, levels = c("1", "-1"))#change value of condition
+PIT.base =  subset(PIT, condition == 'BL'); PIT.csp =  subset(PIT, condition == 'CSplus'); PIT.csm =  subset(PIT, condition == 'CSminus')
+PIT.csp = PIT.csp %>% arrange(desc(id)); PIT.csm =PIT.csm %>% arrange(desc(id)); PIT.base =PIT.base %>% arrange(desc(id)) #order by id
+#PIT.csp$AUC = PIT.csp$AUC - PIT.base$AUC; PIT.csm$AUC = PIT.csm$AUC - PIT.base$AUC
+PIT.clean = rbind(PIT.csp, PIT.csm) #bind together
 
-PIT.means <- aggregate(PIT[,c(covariate, "AUC")] , by = list(PIT$id, PIT$condition,PIT$session,PIT$intervention, PIT$gender), FUN = 'mean',na.action = na.omit)
+#revalue all catego
+PIT.clean$condition = ifelse(PIT.clean$condition == "CSminus", -1, 1) 
+PIT.clean$gender = PIT.clean$gender = ifelse(PIT.clean$gender == "0", -1, 1)
+PIT.clean$session = PIT.clean$session = ifelse(PIT.clean$session == "second", -1, 1)
+PIT.clean$intervention = ifelse(PIT.clean$intervention == "0", -1, 1)
+
+PIT.means <- aggregate(PIT.clean[,c(covariate, "AUC")] , by = list(PIT.clean$id, PIT.clean$condition,PIT.clean$session,PIT.clean$intervention, PIT.clean$gender), FUN = 'mean',na.action = na.omit)
 
 colnames(PIT.means) <- c('id','condition','session','intervention', 'gender', covariate, "AUC")
 
@@ -129,24 +139,56 @@ colnames(PIT.means) <- c('id','condition','session','intervention', 'gender', co
 PIT.means$thirsty[is.na(PIT.means$thirsty)] <- 0 ; PIT.means$hungry[is.na(PIT.means$hungry)] <- 0 
 
 
+PIT.p <- summarySEwithin(PIT.clean,
+                         measurevar = "AUC",
+                         withinvars = c("trialxcondition","condition", "session"),
+                         idvar = "id")
+
+PIT.p$trial <- as.numeric(PIT.p$trialxcondition)
+PIT.p = select(PIT.p, c('trial', 'N' , 'AUC', 'sd', 'se', 'ci', 'condition',"session"))
+PIT.p$condition <- relevel(PIT.p$condition, "1") # Make MilkShake first
+
+
+PIT.group <- summarySEwithin(PIT.clean,
+                         measurevar = "AUC",
+                         withinvars = c("trialxcondition","condition", "session"),
+                         betweenvars = "intervention",
+                         idvar = "id")
+
+PIT.group$trial <- as.numeric(PIT.group$trialxcondition)
+PIT.group = select(PIT.group, c('trial', 'N' , 'AUC', 'sd', 'se', 'ci', 'condition', 'intervention',"session"))
+PIT.group$condition <- relevel(PIT.group$condition, "1") # Make MilkShake first
+
+
+
 # clean HED --------------------------------------------------------------
 
-#create and center int covariate
-HED$lik = HED$perceived_liking #rename
-dfl = ddply(HED,.(id,condition,session),summarise, fam=mean(perceived_familiarity), int=mean(perceived_intensity)); 
-dfi = subset(dfl, condition  =="MilkShake"); dfi$int = dfl$int[dfl$condition  =="MilkShake"] -dfl$int[dfl$condition  =="Empty"];  dfi$fam = dfl$fam[dfl$condition  =="MilkShake"] -dfl$fam[dfl$condition  =="Empty"]; dfi$int = scale(dfi$int); dfi$fam = scale(dfi$fam); dfi = dfi[-c(2)]
-HED = merge(HED, dfi, by = c("id", "session"))
 
 # define as.factors
 fac <- c("id", "trial", "condition", "session", "intervention","trialxcondition", "gender"); HED[fac] <- lapply(HED[fac], factor)
 
-#revalue all catego
-HED$session = as.factor(revalue(HED$session, c(second="0", third="1"))) #change value of session
-HED$condition = as.factor(revalue(HED$condition, c(Empty="-1", MilkShake="1")));#HED$condition <- factor(HED$condition, levels = c("1", "-1"))#change value of condition
+# recode as contr.sum dummy coding
+HED$intervention = ifelse(HED$intervention == "0", 1,-1) #change value of group
+HED$gender = ifelse(HED$gender == "0", -1, 1) #change value of gender
+HED$condition = ifelse(HED$condition == "MilkShake", 1,-1); #change value of condition
+HED$session = ifelse(HED$session == "second", 1,-1); #change value of condition
 
-HED.means <- aggregate(HED[,c(covariate, "fam", "int", "lik")] , by = list(HED$id, HED$condition,HED$session,HED$intervention, HED$gender), FUN = 'mean', na.action = na.omit)
 
-colnames(HED.means) <- c('id','condition','session','intervention', 'gender', covariate, "fam", "int", "lik")
+# create Intensity and Familiarity diff
+bs = ddply(HED, .(id, condition), summarise, int = mean(perceived_intensity, na.rm = TRUE), fam = mean(perceived_familiarity, na.rm = TRUE)) 
+Empty = subset(bs, condition == "-1"); Milkshake = subset(bs, condition == "1"); diff = Empty;
+diff$int = Milkshake$int - Empty$int; diff$fam = Milkshake$fam - Empty$fam;
+HED = merge(x = HED, y = diff[ , c("int", "fam", 'id')], by = "id", all.x=TRUE)
+
+#center covariates
+numer <- c("fam", "int")
+HED = HED %>% group_by %>% mutate_at(numer, scale)
+HED$intensity = HED$int; HED$familiarity = HED$fam
+
+
+HED.means <- aggregate(HED[,c(covariate, "fam", "int", "perceived_liking")] , by = list(HED$id, HED$condition,HED$session,HED$intervention, HED$gender), FUN = 'mean', na.action = na.omit)
+
+colnames(HED.means) <- c('id','condition','session','intervention', 'gender', covariate, "fam", "int", "perceived_liking")
 
 #imput mean (0) for the two covariate (MAR) so we can get BF (missing values fr 1 participant 217)
 HED.means$thirsty[is.na(HED.means$thirsty)] <- 0 ; HED.means$hungry[is.na(HED.means$hungry)] <- 0 

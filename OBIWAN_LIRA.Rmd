@@ -23,7 +23,7 @@ repro:
     medic: data/medic.csv
     HED_fMRI: data/HED_fmri.csv
     
-  packages: [ aaronpeikert/repro@devel, crsh/papaja@devel, tinylabels, apaTables, MBESS, afex, ggplot2, ggpubr, Rmisc, emmeans, tidyr, BayesFactor, bayestestR, devtools, lspline, kableExtra, sjPlot, knitr, XML, rlist, janitor, optimx, ggthemes, dplyr, JWileymisc, corrplot, caret, intmed, stringr, cowplot, pander, psych, cmdstanr, brms, tidybayes]
+  packages: [ aaronpeikert/repro@devel, crsh/papaja@devel, tinylabels, apaTables, MBESS, afex, ggplot2, ggpubr, Rmisc, emmeans, tidyr, BayesFactor, bayestestR, devtools, lspline, kableExtra, sjPlot, knitr, XML, rlist, janitor, optimx, ggthemes, dplyr, JWileymisc, corrplot, caret, intmed, stringr, cowplot, pander, psych, cmdstanr, brms, tidybayes, tibble]
   scripts: R/clean.R
   apt:
     - libgsl0-dev
@@ -81,6 +81,8 @@ source('R/plots.R', echo=F)# plot specification
 source('R/utils.R', echo=F)# useful functions
 
 panderOptions('knitr.auto.asis', FALSE) #remove auto styling
+
+labels <- c("-1" = "Pre", "1" = "Post")#for plots
 
 # Look at R/clean.R (listed in the YAML) which does all the preprocessing for more info
 
@@ -470,12 +472,12 @@ report = capture.output(sexit(bmod_full, ci=.9))
 
 ```{r PAV_res}
 
-print(paste("Bayesian general linear mixed model (exgaussian family with a identity link) (estimated using MCMC sampling with " ,chains ,"chains of", niter, "iterations and a warmup of", warm, ") to predict RT with condition, intervention, session, age, gender, BMI_V1, hungry, GLP_diff and reelin_diff (formula: RT ~ condition * intervention * session + age + gender + BMI_V1 + hungry + GLP_diff + reelin_diff). The model included condition, session, id and trialxcondition as random effects (formula: list(~condition * session | id, ~1 | trialxcondition)). Priors over parameters were set as normal (mean = 0.00, SD = 3.00), and student_t (location = 0.00, scale = 130.20) distributions"))
+print(paste("Bayesian general linear mixed model (exgaussian family with a identity link) (estimated using MCMC sampling with " ,chains ,"chains of", niter, "iterations and a warmup of", warm, ") to predict Latency with condition, intervention, session, age, gender, BMI_V1, hungry, GLP_diff and reelin_diff (formula: RT ~ condition * intervention * session + age + gender + BMI_V1 + hungry + GLP_diff + reelin_diff). The model included condition, session, id and trialxcondition as random effects (formula: list(~condition * session | id, ~1 | trialxcondition)). Priors over parameters were set as normal (mean = 0.00, SD = 3.00), and student_t (location = 0.00, scale = 130.20) distributions"))
             
 
 full_tab
 
-report[4]; report[16]
+report[c(4,16)]
 
 tables <- list.clean(readHTMLTable("tmp/temp2.html"), fun = is.null, recursive = FALSE)
 tables2 = tables[[1]] %>% janitor::row_to_names(row_number = 1)
@@ -530,7 +532,7 @@ figureRT <- ggarrange(plt_bayes_html, HDI_RT,
 
 
 # RT
-labels <- c("-1" = "Pre", "1" = "Post")
+
 
 dfR <- summarySEwithin(PAV.means,
                        measurevar = "RT",
@@ -668,7 +670,7 @@ print(paste("Bayesian linear mixed model (estimated using MCMC sampling with" ,c
 
 full_tab
 
-report[4]; report[10]
+report[c(4,10)]
 tables <- list.clean(readHTMLTable("tmp/temp3.html"), fun = is.null, recursive = FALSE)
 tables2 = tables[[1]] %>% janitor::row_to_names(row_number = 1)
 tables2 <- as.matrix(tables2) %>% as_tibble()
@@ -772,8 +774,8 @@ grips = number of times participant exceeded the force threshold to acquire the 
 ```{r INST, include=FALSE, cache=F}
 
 # Model
-mf1 = formula(grips ~ trial*intervention*session + hungry + (session|id) + (1|trial)) # LINEAR FIT  
-mf2 = formula(grips ~  lspline(trial,5)*intervention*session + hungry + (session|id) + (1|trial)) # PIECEWISE REGRESSION WITH SPLINE AT 5
+mf1 = formula(grips ~ trial*intervention*session + age + gender + BMI_V1  + hungry + GLP_diff + reelin_diff + (session|id) + (1|trial)) # LINEAR FIT  
+mf2 = formula(grips ~  lspline(trial,5)*intervention*session + age + gender + BMI_V1  + hungry + GLP_diff + reelin_diff + (session|id) + (1|trial)) # PIECEWISE REGRESSION WITH SPLINE AT 5
 
 # -------------------------------------- Bayesian Regression Models using Stan -------------------------------------
 linmod = brm(mf1, data=INST, family = gaussian, prior = c(prior(normal(0, 3), class = "b", coef = ""), prior(normal(0, 100), class = "Intercept", coef = "")), sample_prior = T, save_pars = save_pars(all = TRUE), chains = chains,  iter = niter, warmup = warm, seed = 123, inits = 1, backend = 'cmdstanr', threads = threading(4))  # a lot to unwind here..  1) Generic weakly informative prior around 0 for fixed effects and very weak prior for the intercept 2) we need to sample priors and save parameters for computing BF  
@@ -789,155 +791,131 @@ bmod_full = splinemod #winner model
 fmod_full = lmer(mf2 , data = INST, REML=F, control = control )
 ```
 
-```{r INST, cache=TRUE,  include=FALSE, message=FALSE, warning=FALSE}
-
-measurevar = "grips"
-formula = "intervention*session"
-COVA = "+ age + gender + BMI_V1  + session*thirsty  + hungry +"
-random = '(session|id) + (1|trial)'
-
-model = mixed(as.formula(paste(measurevar, paste (formula, COVA, random), sep="~")), data = INST, method = "LRT", control = control, REML = FALSE); model
-
-## FACTORIAL EARLY/LATE LEARNING PHASIS
-facmod <- lm(grips ~ phasis*session,data=dfTrial)
-#LINEAR FIT
-linmod <- lm(grips ~ Trial*session,data=dfTrial)
-## QUADRATIC FIT  
-quadmod <- lm(grips ~ T2*session,data=dfTrial)
-## PIECEWISE REGRESSION WITH SPLINES
-splinemod <- lm(grips ~ lspline(Trial,-1.07)*session,data=dfTrial) #1.07 = the standardized end of early phase of learning
-
-BF_fit = as_tibble(bayesfactor_models(facmod, linmod, quadmod, splinemod, denominator = facmod)); 
+Model Comparison between linear and piecewise with spline regression\
+Best fit => Piecewise Regression with spline: smaller ELPD (expected log pointwise predictive density estimated via leave-one-out cross-validation) is better\
+```{r}
+comp = tibble::rownames_to_column(as_tibble(comp, rownames = NA)); colnames(comp)[1] = "model"
+pander(comp[c(1:3,8:9)]) # so the splinemod was preferred as the other model had smaller ELPD. Thus, spline improved out-of-sample predictions. can also see: compare_ic(linmod, splinemod) but its deprecated
 ```
-```{r INST_learning_MS, cache=TRUE}
-#print('BF10 for model piecewise regression model ')
-#BF_fit$BF[2]
-BF_fit$Model = c("Factorial early/late Learning Phasis", "Linear Time Fit", "Quadratic Time Fit", "Piecewise Regression with Splines")
-BF_fit$BF10 = formatC(BF_fit$BF, format = "e", digits = 2); BF_fit$BF10[1] = 1; BF_fit = BF_fit[-c(2)]
-kbl(as_tibble(BF_fit), caption = "Bayesian Model Comparison", digits = 1) %>%   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F)  %>%  row_spec(0,bold=T,align='c')
-```
-\
-```{r INST_m, cache=TRUE,  include=FALSE, message=FALSE, warning=FALSE}
-mod <- lmer(as.formula(paste(measurevar, paste(formula, COVA, random), sep="~")),data=INST, control = control)
 
-table = nice(model);  ref_grid(model)
 
-tab_model(mod, show.p = F,show.intercept = F, show.se = T, title ="", show.re.var = F, digits = 2, dv.labels = "Grips", emph.p = TRUE, file = "tmp/temp3.html")
+```{r message = FALSE, results='hide', fig.align="center", out.width = "100%", dpi = 200}
+
+## plot population-level effects posterior distributions and chain sampling
+
+param = mcmc_plot(object = bmod_full, pars =c("b_.*al"), type ="areas")
+param2 = mcmc_plot(object = bmod_full, pars =c("b_.*y", "b_.*ge", "b_.*diff", "b_.*V1"), type ="areas")
+
+
+trace = mcmc_plot(object = bmod_full, pars =c("b_.*al"), type ="trace")
+trace2 = mcmc_plot(object = bmod_full, pars =c("b_.*y", "b_.*ge", "b_.*diff", "b_.*V1"), type ="trace")
+
+#check assumptions
+var_group = pp_check(bmod_full, type = "stat_grouped", group = "intervention", binwidth = 0.01, nsamples = NULL) #equality of variance between groups
+
+rep_fit = pp_check(bmod_full, nsamples = 10) # check response fit 
+
+error = pp_check(bmod_full, type ="error_scatter_avg", nsamples = NULL) # check good alignment between model and data, and no obvious pattern to the types of errors we are getting.
+
+
+#Normality of errors
+residuals <-residuals(bmod_full)[, 1]; res <- qqnorm(residuals, pch = 1, plot.it=F)
+
+lmx = plot_model(fmod_full, type = "diag"); #diagnostic plots for lmer
+
+#plot all
+diagINST <- ggarrange(param, var_group, rep_fit, error, ncol = 2, nrow = 2)
+
+annotate_figure(diagINST, top = text_grob("Diagnostic Plots", face = "bold", size = 10))
 ```
-\
-```{r INST_mod}
-tables <- list.clean(readHTMLTable("tmp/temp3.html"), fun = is.null, recursive = FALSE)
+
+```{r INST_tab, include=FALSE, cache=F}
+
+full_tab = describe_posterior(bmod_full,
+                   estimate = "median", dispersion = T,
+                   ci = .9, ci_method = "hdi",
+                   bf_prior = bmod_full, diagnostic = "Rhat",  
+                   test = c("p_direction", "bf"))
+
+full_tab = filter(full_tab, Parameter %notin% c("b_Intercept", "prior_beta", "prior_sigma"))
+
+x = attributes(full_tab); x$clean_parameters[c(2:3,12:15,17:18),5] = c("trial<5",       "trial>5"  , "trial<5:intervention"  , "trial>5:intervention",  "trial<5:session", "trial>5:session", "trial<5:intervention:session" , "trial>5:group:session"); attributes(full_tab) = x
+
+
+# -------------------------------------- FREQUENTIST STATS: LRT + Bootstrap  -----------------------------------------------
+
+# fmod_spline =  update(fmod_full, ~ .-lspline(trial,5)) #evaluate trial spline
+# 
+# # p-value from bootstrap distribution
+# LRT_spline = PBmodcomp(fmod_full, fmod_spline, nsim = 500, seed = 123, cl=cl)
+
+
+# -------------------------------------- Regression table summary --------------------------------------
+
+tab_model(bmod_full, show.p = F, show.intercept = F, show.se = T, title ="", show.re.var = F, digits = 3, dv.labels = "Number of Grips", file = "tmp/temp4.html", transform = NULL,  rm.terms = "beta")
+
+report = capture.output(sexit(bmod_full, ci=.9))
+
+```
+
+```{r INST_res}
+
+print(paste("Bayesian linear mixed model (estimated using MCMC sampling with" ,chains ," chains of", niter, " iterations and a warmup of", warm, ") to predict grips with trial, intervention, session, age, gender, BMI_V1, hungry, GLP_diff and reelin_diff (formula: grips ~ lspline(trial, 5) + intervention + session + age + gender + BMI_V1 + hungry + GLP_diff + reelin_diff + lspline(trial, 5):intervention + lspline(trial, 5):session + intervention:session + lspline(trial, 5):intervention:session). The model included session, id and trial as random effects (formula: list(~session | id, ~1 | trial)). Priors over parameters were set as normal (mean = 0.00, SD = 3.00), and student_t (location = 0.00, scale = 8.90) distributions"))
+
+full_tab
+
+report[4,5,7]
+
+tables <- list.clean(readHTMLTable("tmp/temp4.html"), fun = is.null, recursive = FALSE)
 tables2 = tables[[1]] %>% janitor::row_to_names(row_number = 1)
-
 tables2 <- as.matrix(tables2) %>% as_tibble()
-tables2[is.na(tables2)] <- ""
-tables3 = tables2[1:length(table$Effect),1:4] 
-tables3[5] = str_split(gsub("[^0-9.,-]", "", table[3]), ",")[[1]]; tables3[6] = as.numeric(str_split(gsub("[^0-9.,-]", "", table[4]), ",")[[1]]); 
-tables3$...6 = ifelse(tables3$...6 < 0.05,paste("<span style=\" font-weight: bold; \" >" ,sprintf("%.3f",tables3$...6), "</span>"),  paste("<span>" ,sprintf("%.3f",tables3$...6), "</span>"))
 
-colnames(tables3)[5] = "\u03C7\u00B2"; colnames(tables3)[6] = "p"
-# tables3$p[3]= "<span style=\" font-weight: bold;    \" >\u003C 0.300</span>"
-tables3 %>% kbl(caption ="Grips",escape = F ) %>%
-  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(0,bold=T,align='c')
-tmp = tables2[(length(table$Effect)+1):(length(table$Effect)+5),1:2]
-names(tmp) <- NULL
-tmp1 <- data.frame(t(tmp[-1]))
-colnames(tmp1) <- tmp[[1]]
-tmp1 %>% kbl(digits = 2) %>%
-  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) 
+
+tables2[is.na(tables2)] <- "";  names(tables2) <- NULL; tmp = t( tables2[(length(full_tab$Parameter)+1):(length(full_tab$Parameter)+5),1:2]);
+tmp[,5][1] = "R2"; tmp[,5][2] = gsub(".*/","",tmp[,5][2])
+pander::pander(tmp)
+# tmp %>% kbl() %>%
+#   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(1,bold=T)
 
 ```
 \
-```{r message = FALSE, echo=FALSE, results='hide', fig.show="hold", out.width="25%", fig.align="center", fig.cap = 'Model assumptions.', warning=F}
-x = plot_model(mod, type = "diag")
-x[-c(2)]
-x[2][[1]]$id
- #check assumptions
-```
 \
-\
-```{r INST_plot, echo=FALSE, warning=FALSE, message=FALSE, cache=TRUE, fig.align="center", fig.cap="Number of Grips over time by session."}
-INSTPRE = subset(INST, session == 0)
-INSTPOST = subset(INST, session == 1)
-
-#--------------------------PRE
-dfTRIAL <- summarySEwithin(INSTPRE, na.rm=TRUE,
-                           measurevar = "grips",
-                           withinvars = c("trial","session"),
-                           idvar = "id")
-
-dfTRIAL$trial       <- as.numeric(dfTRIAL$trial)
-
-dfTRIALg <- summarySEwithin(INSTPRE, na.rm=TRUE,
-                            measurevar = "grips",
-                            withinvars = c("trial","session"),
-                            betweenvars = "intervention",
-                            idvar = "id")
-
-dfTRIALg$trial       <- as.numeric(dfTRIALg$trial)
-
-dfTRIAL$x = dfTRIAL$trial; dfTRIAL$y = dfTRIAL$grips
-splinelm <- lm(y ~ lspline(x, 5), data=dfTRIAL)
-
-pp <- ggplot(dfTRIAL, aes(x =trial, y = grips)) +
-  geom_point(data = dfTRIALg, aes(shape = intervention), alpha = 0.3, color = 'black') +
-  geom_point(data = dfTRIAL, aes(fill = "Mean"), alpha = 0.5, color = pal[4], shape = 18) +
-  geom_smooth(method="lm", formula=formula(splinelm), color="tomato",fill = pal[4], size=0.7) + #addd this for lsplines
-  ylab('')+
-  xlab('') +
-  ggtitle("Pre") +
-  scale_y_continuous(expand = c(0, 0),  limits = c(11.5,15.5),  breaks=c(seq.int(12,15, by = 1))) +
-  scale_x_continuous(expand = c(0, 0),  limits = c(0,15.2),  breaks=c(1,5,10,15)) +
-  scale_shape_manual(name="Intervention", labels=c("Placebo", "Liraglutide"), values = c(1, 2, 18)) +
-  scale_fill_discrete(name="") +
-  guides(shape = FALSE) + 
-  theme_bw()
-
-pltpre = pp + averaged_theme + theme(axis.text.x= element_text(size = 14), axis.text.y= element_text(size = 14), legend.position=c(.94,.99), plot.title = element_text(hjust = 0.5, size = 20), plot.margin = unit(c(0, 1,-1.5,-2), "cm"))
-
-#-------------------------------POST
-dfTRIAL <- summarySEwithin(INSTPOST, na.rm=TRUE,
-                           measurevar = "grips",
-                           withinvars = c("trial","session"),
-                           idvar = "id")
-
-dfTRIAL$trial       <- as.numeric(dfTRIAL$trial)
-
-dfTRIALg <- summarySEwithin(INSTPOST, na.rm=TRUE,
-                            measurevar = "grips",
-                            withinvars = c("trial","session"),
-                            betweenvars = "intervention",
-                            idvar = "id")
-
-dfTRIALg$trial       <- as.numeric(dfTRIALg$trial)
-
-dfTRIAL$x = dfTRIAL$trial; dfTRIAL$y = dfTRIAL$grips
-
-pp <- ggplot(dfTRIAL, aes(x =trial, y = grips)) +
-  geom_point(data = dfTRIALg, aes(shape = intervention), alpha = 0.3, color = 'black') +
-  geom_point(data = dfTRIAL, alpha = 0.5, color = pal[4], shape = 18) +
-  geom_smooth(method="lm", color="tomato",fill = pal[4], size=0.7) + #addd this for lsplines
-  ggtitle("Post") +
-  ylab('')+
-  xlab('') +
-  scale_y_continuous(expand = c(0, 0),  limits = c(11.5,15.5),  breaks=c(seq.int(12,15, by = 1))) +
-  scale_x_continuous(expand = c(0, 0),  limits = c(0,15.2),  breaks=c(1,5,10,15)) +
-  scale_shape_manual(name="Intervention", labels=c("Placebo", "Liraglutide"), values = c(1, 2, 18)) +
-  scale_fill_discrete(name="") +
-  theme_bw()
 
 
-pltpost = pp + averaged_theme + theme(axis.text.x= element_text(size = 14), axis.text.y= element_text(size = 14, color="white"), legend.position=c(.94,.93), plot.title = element_text(hjust = 0.5, size = 20), plot.margin = unit(c(0, 1,-1.5,-2), "cm"))
+#### Plot {-}
+```{r INST_plot, echo = F, results='hide', warning=FALSE, message=FALSE, cache=F, fig.cap="Number of grips over trials by session."}
 
-figure = ggarrange(pltpre, pltpost, labels = c("", ""),
-  common.legend = F)
-
-
-plt = annotate_figure(figure,
-bottom = text_grob("Trial", size = 16),
- left = text_grob("Number of Grips \n ", rot = 90, size = 16),
+int_conditions <- list(
+  session = setNames(c(-1, 1), c("pre", "post"))
 )
-plt
+plt = conditional_effects(bmod_full, effects = "trial:session",
+                    int_conditions = int_conditions) #easier to extract spline with brms
+
+dfTRIAL = as_tibble(plt$trial); dfTRIAL$grips = dfTRIAL$estimate__
+
+#by groups
+dfTRIALg <- summarySEwithin(INST.means,
+                            measurevar = "grips",
+                            withinvars = c("trial", "session"),
+                            betweenvars = "intervention",
+                            idvar = "id")
+
+dfTRIALg$trial       <- as.numeric(dfTRIALg$trial)
+
+pp <-  ggplot(dfTRIAL, aes(x =trial, y = grips)) +
+  geom_point(data = dfTRIALg, aes(shape = intervention), alpha = 0.3, color = 'black') +
+  geom_line(data = dfTRIAL, size =1, color = pal[4]) +
+  geom_ribbon(aes(ymin=grips-se__, ymax=grips+se__), fill = pal[4], alpha = 0.3, )+
+  ylab('Number of Grips')+
+  xlab('Trial') +
+  scale_y_continuous(expand = c(0, 0),  limits = c(9.5,16.05),  breaks=c(seq.int(9,16, by = 1))) +
+  scale_x_continuous(expand = c(0, 0),  limits = c(0,25),  breaks=c(seq.int(1,25, by = 2))) +
+  scale_shape_manual(name="Group", labels=c("Placebo", "Liraglutide"), values = c(1, 2, 18)) +
+  theme_bw() +
+  facet_wrap(~session, labeller=labeller(session = labels))
+
+pp + html_theme + theme(legend.position=c(.9,.88))
+plt = pp + averaged_theme + theme(legend.position=c(.9,.88))
 
 ```
 \
@@ -948,56 +926,147 @@ print(plt)
 dev.off()
 ```
 
-# PIT (Pavlovian-Instrumental Transfer) Task
-Mobilized effort = Area Under the Curve (AUC) of the force exerted exceeding the delivery threshold during Pavlvovian cue presentation
-condition = CS+ or CS-
-```{r PIT, echo=FALSE, include=FALSE, cache=TRUE, warning=F}
-measurevar = "AUC"
-formula = "condition*intervention*session"
-COVA = "+ age + gender + BMI_V1  + thirsty  + hungry +"
-random = " (condition*session|id) + (1|trialxcondition)"
 
-#method LRT
-model = mixed(as.formula(paste(measurevar, paste (formula, COVA, random), sep="~")), data = PIT, method = "LRT", control = control, REML = FALSE); model
+### Pavlvovian-Instrumental Transfer (PIT) Task 
+Mobilized effort = Area under the curve of the force exerted exceeding the delivery threshold during Pavlovian cue presentation
+```{r PIT, echo=F, results='hide', message=FALSE, warning=FALSE}
 
-table = nice(model);  ref_grid(model)  #triple check everything is centered at 0
+mf = formula(AUC ~ condition*intervention*session + age + gender + BMI_V1  + hungry + GLP_diff + reelin_diff + (condition*session|id) + (1|trialxcondition))
 
-mod =  lmer(as.formula(paste(measurevar, paste (formula, COVA, random), sep="~")), data = PIT, control = control)
-tab_model(mod, show.p = F,show.intercept = F, show.se = T, title ="", show.re.var = F, digits = 2, dv.labels = "Mobilized effort", emph.p = TRUE, file = "tmp/temp4.html")
+# -------------------------------------- Bayesian Regression Models using Stan -------------------------------------
+bmod_full = brm(bf(mf, hu ~ 1), family = hurdle_gaussian, stanvars = stanvars, data=PIT.clean, prior =  c(prior(normal(0, 3), class = "b", coef = ""), prior(normal(0, 100), class = "Intercept", coef = ""), prior(logistic(0, 0.5), class = "Intercept", dpar = "hu")), sample_prior = T, save_pars = save_pars(all = TRUE), chains = chains,  iter = niter, warmup = warm, seed = 123, inits = 1, backend = 'cmdstan', threads = threading(4)) # a lot to unwind here.. 1) custom gaussian hurdle cause zero-inflated continous data more details here: https://cran.r-project.org/web/packages/brms/vignettes/brms_customfamilies.html 2) Generic weakly informative prior around 0 for fixed effects and very weak prior for the intercept 3) we need to sample priors and save parameters for computing BF 
+
+#lmer to compare
+fmod_full = lmer(mf , data = PIT.clean, REML=F, control = control)
+
 ```
-\
-```{r PIT_mod}
-tables <- list.clean(readHTMLTable("tmp/temp4.html"), fun = is.null, recursive = FALSE)
+
+
+```{r message = FALSE, results='hide', fig.align="center", out.width = "100%", dpi = 200}
+
+## plot population-level effects posterior distributions and chain sampling
+param = mcmc_plot(object = bmod_full,  pars =c("b_.*o", "b_.*y", "b_.*ge", "b_.*diff", "b_.*V1"), type ="areas") 
+
+trace = mcmc_plot(object = bmod_full,  pars =c("b_.*o", "b_.*y", "b_.*ge", "b_.*diff", "b_.*V1"), type ="trace")
+
+
+#check assumptions
+var_group = pp_check(bmod_full, type = "stat_grouped", stat = "median", group = "intervention", binwidth = 1, nsamples = NULL) #equality of variance between groups
+
+rep_fit = pp_check(bmod_full, nsamples = 10) # check response fit 
+
+error = pp_check(bmod_full, type ="error_scatter_avg", nsamples = NULL) # check good alignment between model and data, and no obvious pattern to the types of errors we are getting.
+
+
+#Normality of errors
+residuals <-residuals(bmod_full)[, 1]; res <- qqnorm(residuals, pch = 1, plot.it=F)
+
+lmx = plot_model(fmod_full, type = "diag"); #diagnostic plots for lmer
+
+#plot all
+diagPIT <- ggarrange(param, var_group, rep_fit, error, ncol = 2, nrow = 2)
+
+annotate_figure(diagPIT, top = text_grob("Diagnostic Plots", face = "bold", size = 10))
+# check response fit -> capture better the bimodal distrib
+# residual ... could be better but at least it's MUCH better than simple gaussian see lmx[1] ... this is just catastrophic..
+```
+
+
+```{r PIT_res, include=FALSE, cache=F}
+
+full_tab = describe_posterior(bmod_full,
+                   estimate = "median", dispersion = T,
+                   ci = .9, ci_method = "hdi",
+                   bf_prior = bmod_full, diagnostic = "Rhat",  
+                   test = c("p_direction", "bf"))
+
+
+
+full_tab = filter(full_tab, Parameter %notin% c("b_Intercept", "b_hu_Intercept", "prior_sigma"))
+
+# -------------------------------------- FREQUENTIST STATS: LRT + Bootstrap  -----------------------------------------------
+
+# fmod_cond = update(fmod_full,  ~ .-condition) #evaluate condition
+
+# # p-value from bootstrap distribution
+# LRT_cond = PBmodcomp(fmod_full, fmod_cond, nsim = 500, seed = 123, cl=cl) 
+
+# -------------------------------------- Regression table summary --------------------------------------
+
+tab_model(bmod_full, show.p = F,show.intercept = F, show.se = T, title ="", show.re.var = F, digits = 3, dv.labels = "Mobilized effort (a.u.)", file = "tmp/temp5.html", transform = NULL,  rm.terms = "hu_Intercept")
+
+report = capture.output(sexit(bmod_full, ci=.9))
+
+```
+
+
+```{r PIT_tab}
+print(paste("Bayesian general linear mixed model (hurdle gaussian family with a identity link) (estimated using MCMC sampling with" ,chains ," chains of", niter, " iterations and a warmup of", warm, ") to predict Mobilized Effort (AUC) with condition, intervention, session, age, gender, BMI_V1, hungry, GLP_diff and reelin_diff (formula: AUC ~ condition * intervention * session + age + gender + BMI_V1 + hungry + GLP_diff + reelin_diff). The model included condition, session, id and trialxcondition as random effects (formula: list(~condition * session | id, ~1 | trialxcondition)). Priors over parameters were set as normal (mean = 0.00, SD = 3.00), and student_t (location = 0.00, scale = 130.20) distributions"))
+            
+
+full_tab
+
+report[5]
+
+
+tables <- list.clean(readHTMLTable("tmp/temp5.html"), fun = is.null, recursive = FALSE)
 tables2 = tables[[1]] %>% janitor::row_to_names(row_number = 1)
+tables2 <- as.matrix(tables2) %>% as_tibble(); 
 
-tables2 <- as.matrix(tables2) %>% as_tibble()
-tables2[is.na(tables2)] <- ""
-tables3 = tables2[1:length(table$Effect),1:4] 
-tables3[5] = str_split(gsub("[^0-9.,-]", "", table[3]), ",")[[1]]; tables3[6] = as.numeric(str_split(gsub("[^0-9.,-]", "", table[4]), ",")[[1]]); 
-tables3$...6 = ifelse(tables3$...6 < 0.05,paste("<span style=\" font-weight: bold; \" >" ,sprintf("%.3f",tables3$...6), "</span>"),  paste("<span>" ,sprintf("%.3f",tables3$...6), "</span>"))
-colnames(tables3)[5] = "\u03C7\u00B2"; colnames(tables3)[6] = "p"
-#tables3$p[1]= "<span style=\" font-weight: bold;    \" >\u003C 0.001</span>"
-tables3  %>% kbl(caption ="Mobilized effort (a.u.)",escape = F ) %>%
-  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(0,bold=T,align='c')
-tmp = tables2[(length(table$Effect)+1):(length(table$Effect)+5),1:2]
-names(tmp) <- NULL
-tmp1 <- data.frame(t(tmp[-1]))
-colnames(tmp1) <- tmp[[1]]
-tmp1 %>% kbl(digits = 2) %>%
-  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) 
+
+tables2[is.na(tables2)] <- "";  names(tables2) <- NULL; tmp = t(tables2[(length(full_tab$Parameter)+1):(length(full_tab$Parameter)+5),1:2]);
+tmp[,5][1] = "R2"; tmp[,5][2] = gsub(".*/","",tmp[,5][2])
+pander::pander(tmp)
 
 ```
-\
-```{r message = FALSE, echo=FALSE, results='hide', fig.show="hold", out.width="25%", fig.align="center", fig.cap = 'Model assumptions.', warning=F}
-x = plot_model(mod, type = "diag")
-x[-c(2)]
-x[2][[1]]$id
- #check assumptions
-```
-\
-\
 
-```{r PIT_plot, echo=FALSE, warning=FALSE, cache=TRUE, fig.align="center", fig.cap="Mobilized effort by pavlovian cue."}
+#### Plot {-}
+
+
+```{r PIT_plot, warning=FALSE,  message = FALSE, results='hide', fig.align="center", fig.cap="A) Posterior distribution by group. B) Highest density interval (90% HDI) for the interaction condition by sessioon"}
+
+# plot HDI
+dfdraws = bmod_full %>%
+    spread_draws(`b_condition` )
+
+HDI_PIT = plotHDI( dfdraws$`b_condition` , credMass = .90, binSize = 100, Title = "") + theme_bw()
+
+
+#plot estimated means from posterior distribution from the model draws
+
+
+dfdraws2 =  bmod_full %>%
+     emmeans(~ condition) %>%
+     gather_emmeans_draws() 
+
+# CSp = subset(dfdraws2, condition ==1); CSm = subset(dfdraws2, condition ==-1); diff= CSp; diff$.value = CSp$.value - CSm$.value
+
+
+pp = dfdraws2 %>% #diff
+    ggplot(aes(x = as.factor(condition) , y = .value,  fill = as.factor(condition))) +
+    #geom_abline(slope= 0, intercept=0, linetype = "dashed", color = "black") +
+    #geom_point(position = "jitter") +
+    stat_slab(.width = c(0.50, 0.9), position="dodge", alpha=0.5) +
+    stat_pointinterval(.width = c(0.50, 0.9),position="dodge") +
+    ylab('Mobilized effort')+
+    xlab('')+
+    scale_fill_manual(values=c("1" = pal[6],"-1"=pal[1]), guide="none") +
+    scale_color_manual( values=c("1" = pal[6],"-1"=pal[1]), guide="none") +
+    scale_x_discrete(labels=c("CS-", "CS+")) +
+    theme_bw()
+
+plt_bayes_html = pp + html_theme 
+plt_bayes = pp + averaged_theme 
+
+
+figurePIT <- ggarrange(plt_bayes_html, HDI_PIT,
+                    labels = c("A", "B"),
+                    ncol = 2)
+#figurePIT
+
+
+#### Plot PIT
+
 dfL <- summarySEwithin(PIT.means,
                        measurevar = "AUC",
                        withinvars = c("condition","session"), 
@@ -1010,10 +1079,10 @@ PIT.means <- PIT.means %>% mutate(condjit = jitter(as.numeric(cond), 0.3),groupi
 
 # AUC
 pp <- ggplot(PIT.means, aes(x = cond, y = AUC,
-                            fill = condition, color = condition)) +
+                            fill = as.factor(condition), color = as.factor(condition))) +
   geom_line(aes(x = condjit, group = id, y = AUC), alpha = .3, size = 0.5, color = 'gray' ) +
-  geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(fill = condition, color = NA)) +
-  geom_point(aes(x = condjit, shape = intervention), alpha = .3) +
+  geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(fill = as.factor(condition), color = NA)) +
+  geom_point(aes(x = condjit, shape = as.factor(intervention)), alpha = .3) +
   geom_crossbar(data = dfL, aes(y = AUC, ymin=AUC-se, ymax=AUC+se), width = 0.2 , alpha = 0.1)+
   ylab('Mobilized effort (a.u.)')+
   xlab('Condition')+
@@ -1029,16 +1098,85 @@ pp <- ggplot(PIT.means, aes(x = cond, y = AUC,
 pp + html_theme +theme(legend.position=c(.94,.94))
 plt = pp + averaged_theme +theme(legend.position=c(.94,.94))
 ```
-\
+
+```{r PIT_time, warning=FALSE,  message = FALSE, results='hide', fig.align="center", fig.cap="Mobilized effort for each condition and group over trials."}
+
+
+# PLOT OVERTIME
+
+
+pp <- ggplot(PIT.p, aes(x = as.numeric(trial), y = AUC,
+                        color = condition,
+                        fill  = condition))+
+    geom_point(data = PIT.group, aes(shape = intervention, color = condition), alpha = 0.3) +
+  geom_line(alpha = .5, size = 1, show.legend = F) +
+  geom_ribbon(aes(ymax = AUC + se, ymin = AUC - se),  alpha=0.4) +
+  geom_point() +
+  ylab('Mobilized effort (a.u.)')+
+  xlab('Trial')+
+  scale_color_manual(labels = c('-1'= 'CS-', "1" = 'CS+'), name="",
+                     values = c("1"= pal[2], '-1'= pal[1])) +
+  scale_fill_manual(labels = c('-1'= 'CS-', "1" = 'CS+'), name="",
+                    values = c("1"= pal[2], '-1'= pal[1])) +
+  scale_y_continuous(expand = c(0, 0),  limits = c(50,200),  breaks=c(seq.int(50,200, by = 50))) +
+  scale_x_continuous(expand = c(0, 0),  limits = c(0,15),  breaks=c(seq.int(1,15, by = 2))) +
+    scale_shape_manual(name="Group", labels=c("Placebo", "Liraglutide"), values = c(1, 2, 18)) +
+  theme_bw() +
+  facet_wrap(~session, labeller=labeller(session =labels))
+
+
+pp + html_theme + theme(strip.background = element_rect(fill="white"), legend.key.size = unit(0.3, "cm"))
+plt = pp + averaged_theme + theme(strip.background = element_rect(fill="white"), legend.key.size = unit(0.8, "cm"), axis.text.x = element_text(size = 16))
+
+
+
+# bmod_time = update(bmod_full,  ~ .+as.factor(trialxcondition)) #evaluate interaction
+# 
+# df =  bmod_time %>%
+#      emmeans(~ condition:session:trialxcondition) 
+# 
+# 
+# 
+# bayes_plt = as_tibble(df) %>%
+#     ggplot(aes(x = trialxcondition, y = emmean,  fill =as.factor(condition))) +
+#     #geom_point(position = "jitter") +
+#     geom_smooth(method=loess, se = T,inherit.aes = T) + 
+#     #stat_slab(.width = c(0.50, 0.95),position="dodge", alpha=0.5) +
+#     #stat_pointinterval(.width = c(0.50, 0.95),position="dodge") +
+#     ylab('Mobilized effort (a.u.) \n Baseline corrected')+
+#     xlab('')+
+#     scale_fill_manual(values=c("1" = pal[2],"-1"=pal[1]), guide="none") +
+#     scale_color_manual( values=c("1" = pal[2],"-1"=pal[1]), guide="none") +
+#     #scale_x_discrete(labels=c("CS+", "CS-")) +
+#     theme_bw() + facet_wrap(~session, labeller=labeller(session =labels))
+
+```
+
 \
 ```{r PIT_save, echo=FALSE, include = FALSE, warning=FALSE}
 cairo_pdf('figures/Figure_PIT_Lira.pdf')
 print(plt)
 dev.off()
+
+cairo_pdf('figures/Figure_PIT_Lira_Bayes.pdf')
+print(figurePIT)
+dev.off()
 ```
 
+
 # Hedonic Reactivity Test 
-Perceived liking = how pleasant is the liquid solution rated (0-100, with repetitions)   &   condition = Milshake or Tasteless   &   intensity = difference on how intense the liquid solution were rated 
+Perceived liking = how pleasant is the liquid solution rated (0-100, with repetitions)   &   condition = Milshake or Tasteless   &   intensity = difference on how intense the liquid solution were rated (mean(Milshake) - mean(Tasteless)) &   familiarity = difference on how familiar the liquid solution were rated (mean(Milshake) - mean(Tasteless))
+```{r HED, include=FALSE, cache=F}
+
+mf = formula(perceived_liking ~ condition*intervention*session + age + gender + BMI_V1  + hungry + GLP_diff + reelin_diff + int + fam + (condition*session|id) + (1|trialxcondition))
+
+# -------------------------------------- Bayesian Regression Models using Stan -------------------------------------
+bmod_full = brm(bf(mf, hu ~ 1), family = hurdle_gaussian, stanvars = stanvars, data=HED, prior =  c(prior(normal(0, 3), class = "b", coef = ""), prior(normal(0, 100), class = "Intercept", coef = ""), prior(logistic(0, 0.5), class = "Intercept", dpar = "hu")), sample_prior = T, save_pars = save_pars(all = TRUE), chains = chains,  iter = niter, warmup = warm, seed = 123, inits = 1, backend = 'cmdstan', threads = threading(4))# a lot to unwind here.. 1)  custom gaussian hurdle cause zero-inflated continous data 2) Generic weakly informative prior around 0 for fixed effects and very weak prior for the intercept 3) we need to sample priors and save parameters for computing BF #this one is a big longer, so seat tight
+
+#lmer to compare
+fmod_full = lmer(mf , data = HED, REML=F, control = control)
+
+```
 ```{r HED, echo=FALSE, include=FALSE, cache=TRUE, warning=F}
 measurevar = "lik"
 formula = "condition*intervention*session"

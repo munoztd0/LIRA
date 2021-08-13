@@ -1,3 +1,54 @@
+################################################
+## MARGINAL MODEL PLOTS for BRM @Hok Chio (Mark) Lai
+################################################
+
+mmp_brm <- function(object, x = NULL, prob = 0.95, size = 0.8, 
+                    plot_pi = FALSE, jitter = FALSE, 
+                    smooth_method = "auto") {
+  dat <- object$data
+  post_mu <- fitted(object, scale = "response")
+  colnames(post_mu) <- c("mu", "mu_se", "lwr_ci", "upr_ci")
+  df_plot <- cbind(dat, post_mu)
+  if (is.null(x)) {
+    lin_pred <- fitted(object, scale = "linear")
+    df_plot$lin_pred <- lin_pred[ , 1]
+    x <- "lin_pred"
+  }
+  x_sd <- sd(df_plot[[x]])
+  p <- ggplot(aes_string(x = paste0("`", x, "`"), 
+                         y = paste0("`", names(dat)[1], "`")), data = df_plot) + 
+    # Add a layer of predictive intervals
+    geom_ribbon(aes(ymin = predict(loess(as.formula(paste("lwr_ci ~", x)), 
+                                         data = df_plot)), 
+                    ymax = predict(loess(as.formula(paste("upr_ci ~", x)), 
+                                         data = df_plot))), 
+                fill = "skyblue", alpha = 0.3) + 
+    geom_smooth(aes(y = mu, col = "Model"), se = FALSE, 
+                method = smooth_method) + 
+    geom_smooth(aes(col = "Data"), se = FALSE, linetype = "dashed", 
+                method = smooth_method) + 
+    theme(legend.position = "bottom") + 
+    scale_color_manual(values = c("red", "blue"), name = "")
+  if (jitter) {
+    p <- p + geom_jitter(size = size, width = x_sd * .1, height = .02)
+  } else {
+    p <- p + geom_point(size = size)
+  }
+  if (plot_pi) {
+    pi <- predictive_interval(object, prob = prob)
+    colnames(pi) <- c("lwr_pi", "upr_pi")  # change the names for convenienc
+    # Combine the PIs with the original data
+    df_plot <- cbind(df_plot, pi)
+    p <- p + geom_smooth(aes(y = upr_pi), data = df_plot, linetype = "longdash", 
+                         se = FALSE, size = 0.5, col = "green", 
+                         method = smooth_method) + 
+      geom_smooth(aes(y = lwr_pi), data = df_plot, linetype = "longdash", 
+                  se = FALSE, size = 0.5, col = "green", 
+                  method = smooth_method)
+  }
+  p
+}
+
 
 ################################################
 ## HIERARCHICAL VARIABLE SCALING
@@ -310,6 +361,51 @@ facID = function(x){
 #   return(x)
 # }
 
+
+
+
+# STAN FUNCTIONS ----------------------------------------------------------
+
+# Create a custom family that is logit if y = 0, normal/gaussian if not
+hurdle_gaussian <- 
+  custom_family("hurdle_gaussian", 
+                dpars = c("mu", "sigma", "hu"),
+                links = c("identity", "log", "logit"),
+                lb = c(NA, NA, 0),
+                type = "real")
+
+stan_funs <- "
+  real hurdle_gaussian_lpdf(real y, real mu, real sigma, real hu) {
+    if (y == 0) {
+      return bernoulli_logit_lpmf(1 | hu);
+    } else {
+      return bernoulli_logit_lpmf(0 | hu) +
+             normal_lpdf(y | mu, sigma);
+    }
+  }
+"
+
+
+
+
+stanvars <- stanvar(scode = stan_funs, block = "functions")
+
+
+# Adapted from posterior_predict_hurdle_lognormal at
+# https://github.com/paul-buerkner/brms/blob/master/R/posterior_predict.R#L736
+posterior_predict_hurdle_gaussian <- function(i, prep, ...) {
+  theta <- prep$dpars$hu[, i]
+  mu <- prep$dpars$mu[, i]
+  sigma <- prep$dpars$sigma
+  ndraws <- prep$nsamples
+  
+  hu <- runif(ndraws, 0, 1)
+  ifelse(hu < theta, 0, rnorm(ndraws, mu, sigma))
+}
+
+posterior_epred_hurdle_gaussian <- function(prep) {
+  with(prep$dpars, mu * (1 - hu))
+}
 
 
 
