@@ -1,0 +1,13 @@
+# to rerun
+add all: OBIWAN_T0.pdf to the Makefile
+and ENV DEBIAN_FRONTEND=noninteractive to the docker file
+#install docker https://docs.docker.com/get-docker/
+#sudo apt-get install docker
+sudo make docker && sudo make -B DOCKER=TRUE 
+#sudo docker build -t
+#sudo docker run -d
+
+# add to apt   - octave
+#- gnuplot
+
+#if you get docker: Got permission denied while trying to connect to the Docker daemon socket at unix: -> just sudo chmod 666 /var/run/docker.sock

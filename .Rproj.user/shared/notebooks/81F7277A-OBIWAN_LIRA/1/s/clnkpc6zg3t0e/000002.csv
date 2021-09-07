@@ -1,0 +1,4 @@
+"0",""
+"0","#parallel:::setDefaultClusterOptions(setup_strategy = ""sequential"")"
+"0",""
+"0","med_res <- intmed::mediate(y = ""weightLoss"", med = c(""GLP_diff"" ,  ""reelin_diff""),  treat = ""intervention"", ymodel = ""regression"", mmodel = c(""regression"", ""regression""), treat_lv = 1, control_lv = 0, incint = TRUE, inc_mmint = FALSE, conf.level = 0.95, data = df , sim = nsim, complete_analysis = TRUE, digits = 3,  summary_report=F) #c = c(""age"",""gender""),"

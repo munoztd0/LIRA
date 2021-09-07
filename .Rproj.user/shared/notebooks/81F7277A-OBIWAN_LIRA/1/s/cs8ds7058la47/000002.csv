@@ -1,0 +1,52 @@
+"0",""
+"0","print(paste(""Bayesian general linear mixed model (exgaussian family with a identity link) (estimated using MCMC sampling with "" ,chains ,""chains of"", niter, ""iterations and a warmup of"", warm, "") to predict Latency with condition, intervention, session, age, gender, BMI_V1, hungry, GLP_diff and reelin_diff (formula: RT ~ condition * intervention * session + age + gender + BMI_V1 + hungry + GLP_diff + reelin_diff). The model included condition, session, id and trialxcondition as random effects (formula: list(~condition * session | id, ~1 | trialxcondition)). Priors over parameters were set as normal (mean = 0.00, SD = 3.00), and student_t (location = 0.00, scale = 130.20) distributions""))"
+"1","[1]"
+"1"," ""Bayesian general linear mixed model (exgaussian family with a identity link) (estimated using MCMC sampling with  4 chains of 500 iterations and a warmup of 100 ) to predict Latency with condition, intervention, session, age, gender, BMI_V1, hungry, GLP_diff and reelin_diff (formula: RT ~ condition * intervention * session + age + gender + BMI_V1 + hungry + GLP_diff + reelin_diff). The model included condition, session, id and trialxcondition as random effects (formula: list(~condition * session | id, ~1 | trialxcondition)). Priors over parameters were set as normal (mean = 0.00, SD = 3.00), and student_t (location = 0.00, scale = 130.20) distributions"""
+"1","
+"
+"0","            "
+"0",""
+"0","full_tab"
+"1","[34mSummary of Posterior Distribution[39m [34m[39m
+
+Parameter                      | Median |  MAD |         90% CI |     pd |  Rhat |    BF
+----------------------------------------------------------------------------------------
+condition                      |  -4.84 | 2.47 | [-8.56, -0.26] | 94.19% | 1.155 |  4.54
+intervention                   |   0.74 | 2.94 | [-4.41,  5.24] | 61.69% | 1.010 |  1.03
+session                        |   0.28 | 2.87 | [-3.86,  4.45] | 53.87% | 1.003 | 0.913
+age                            |   1.61 | 2.78 | [-2.78,  6.27] | 71.44% | 1.021 |  1.13
+gender                         |   0.12 | 2.78 | [-4.47,  4.74] | 51.06% | 1.016 | 0.860
+BMI_V1                         |   0.60 | 3.06 | [-4.22,  5.51] | 58.94% | 1.036 |  1.01
+hungry                         |  -2.21 | 2.65 | [-6.82,  1.71] | 78.69% | 1.018 |  1.38
+GLP_diff                       |  -0.90 | 2.90 | [-6.38,  3.62] | 61.94% | 0.999 | 0.937
+reelin_diff                    |  -0.50 | 2.87 | [-5.37,  3.98] | 58.50% | 1.013 |  1.01
+condition:intervention         |  -0.32 | 1.85 | [-3.54,  2.62] | 55.50% | 1.006 | 0.625
+condition:session              |  -1.82 | 1.95 | [-5.28,  1.26] | 81.06% | 1.069 |  1.02
+intervention:session           |  -1.26 | 2.63 | [-5.27,  3.08] | 67.56% | 1.023 | 0.943
+condition:intervention:session |   0.10 | 1.78 | [-2.62,  2.77] | 52.00% | 1.003 | 0.740
+"
+"0","report[c(4,16)]"
+"1","[1]"
+"1"," ""- b_condition (Median = -4.84, 90% CI [-8.56, -0.26]) has a 94.19% probability of being negative (< 0), 94.06% of being significant (< -0.05), and 93.06% of being large (< -0.30)""                 "
+"1","
+"
+"1","[2]"
+"1"," ""- b_condition.intervention.session (Median = 0.10, 90% CI [-2.62, 2.77]) has a 52.00% probability of being positive (> 0), 51.19% of being significant (> 0.05), and 44.50% of being large (> 0.30)"""
+"1","
+"
+"0","tables <- list.clean(readHTMLTable(""tmp/temp2.html""), fun = is.null, recursive = FALSE)"
+"0","tables2 = tables[[1]] %>% janitor::row_to_names(row_number = 1)"
+"0","tables2 <- as.matrix(tables2) %>% as_tibble()"
+"0",""
+"0","# check for bad ICC?"
+"0","tables2[is.na(tables2)] <- """";  names(tables2) <- NULL; tmp = t(tables2[(length(full_tab$Parameter)+1):(length(full_tab$Parameter)+5),1:2]);"
+"0","tmp[,5][1] = ""R2""; tmp[,5][2] = gsub("".*/"","""",tmp[,5][2]); colnames(tmp) =  tmp[1,]"
+"0","pander:: pander(tmp[2,])"
+"1","
+--------------------------------------------------------
+ ICC    N id   N trialxcondition   Observations    R2   
+------ ------ ------------------- -------------- -------
+ 1.00    50           20               3223       0.204 
+--------------------------------------------------------
+
+"

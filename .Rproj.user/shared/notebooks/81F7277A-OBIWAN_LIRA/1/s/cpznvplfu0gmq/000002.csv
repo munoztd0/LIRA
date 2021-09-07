@@ -1,0 +1,32 @@
+"0",""
+"0","print(paste(""Bayesian linear mixed model (estimated using MCMC sampling with"" ,chains ,"" chains of"", niter, "" iterations and a warmup of"", warm, "") to predict grips with trial, intervention, session, age, gender, BMI_V1, hungry, GLP_diff and reelin_diff (formula: grips ~ lspline(trial, 5) + intervention + session + age + gender + BMI_V1 + hungry + GLP_diff + reelin_diff + lspline(trial, 5):intervention + lspline(trial, 5):session + intervention:session + lspline(trial, 5):intervention:session). The model included session, id and trial as random effects (formula: list(~session | id, ~1 | trial)). Priors over parameters were set as normal (mean = 0.00, SD = 3.00), and student_t (location = 0.00, scale = 8.90) distributions""))"
+"1","[1]"
+"1"," ""Bayesian linear mixed model (estimated using MCMC sampling with 4  chains of 500  iterations and a warmup of 100 ) to predict grips with trial, intervention, session, age, gender, BMI_V1, hungry, GLP_diff and reelin_diff (formula: grips ~ lspline(trial, 5) + intervention + session + age + gender + BMI_V1 + hungry + GLP_diff + reelin_diff + lspline(trial, 5):intervention + lspline(trial, 5):session + intervention:session + lspline(trial, 5):intervention:session). The model included session, id and trial as random effects (formula: list(~session | id, ~1 | trial)). Priors over parameters were set as normal (mean = 0.00, SD = 3.00), and student_t (location = 0.00, scale = 8.90) distributions"""
+"1","
+"
+"0","full_tab"
+"1","[34mSummary of Posterior Distribution[39m [34m[39m
+
+Parameter                    | Median |  MAD |         90% CI |     pd |  Rhat |     BF
+---------------------------------------------------------------------------------------
+trial<5                      |   0.06 | 0.09 | [-0.08,  0.20] | 75.56% | 1.000 |  0.034
+trial>5                      |  -0.12 | 0.01 | [-0.14, -0.09] |   100% | 1.000 | > 1000
+intervention                 |  -1.71 | 1.01 | [-3.36, -0.02] | 95.12% | 1.001 |   1.28
+session                      |   1.29 | 0.51 | [ 0.54,  2.19] | 99.44% | 0.998 |   4.13
+age                          |  -1.03 | 0.81 | [-2.33,  0.30] | 91.00% | 1.001 |  0.611
+gender                       |  -0.31 | 0.92 | [-1.73,  1.18] | 62.94% | 1.001 |  0.333
+BMI_V1                       |  -1.38 | 0.95 | [-2.93,  0.20] | 92.94% | 1.001 |   1.19
+hungry                       |  -0.20 | 0.63 | [-1.21,  0.96] | 62.25% | 0.999 |  0.215
+GLP_diff                     |   1.07 | 1.14 | [-0.81,  2.85] | 83.38% | 1.004 |  0.631
+reelin_diff                  |   0.17 | 1.28 | [-1.88,  2.37] | 54.31% | 1.002 |  0.415
+trial<5:intervention         |   0.10 | 0.08 | [-0.03,  0.23] | 90.00% | 0.998 |  0.054
+trial>5:intervention         |   0.02 | 0.01 | [ 0.00,  0.05] | 97.06% | 0.999 |  0.032
+trial<5:session              |  -0.19 | 0.08 | [-0.32, -0.06] | 98.88% | 0.998 |  0.399
+trial>5:session              |   0.02 | 0.01 | [ 0.00,  0.04] | 92.62% | 0.999 |  0.014
+intervention:session         |   0.24 | 0.54 | [-0.69,  1.06] | 67.56% | 0.999 |  0.195
+trial<5:intervention:session |  -0.12 | 0.08 | [-0.27,  0.02] | 91.69% | 1.000 |  0.075
+trial>5:group:session        |  -0.02 | 0.01 | [-0.04,  0.00] | 96.06% | 0.999 |  0.020
+"
+"0","report[4,5,7]"
+"2","Error in report[4, 5, 7] : incorrect number of dimensions
+"
