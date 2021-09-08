@@ -83,7 +83,7 @@ colnames(PAV.means) <- c('id','condition','session','intervention', 'gender', co
 
 
 #imput mean (0) for the two covariate (MAR) so we can get BF (missing values fot 2 participant 262 and 232)
-PAV.means$thirsty[is.na(PAV.means$thirsty)] <- 0 ; PAV.means$hungry[is.na(PAV.means$hungry)] <- 0 
+#PAV.means$thirsty[is.na(PAV.means$thirsty)] <- 0 ; PAV.means$hungry[is.na(PAV.means$hungry)] <- 0 
 
 # clean INST --------------------------------------------------------------
 INST$Trial = as.numeric(INST$trial)
@@ -105,7 +105,7 @@ INST.means <- aggregate(INST[,c(covariate, "grips")] , by = list(INST$id,INST$tr
 colnames(INST.means) <- c('id','trial','session','intervention', 'gender', covariate, "grips")
 
 #imput mean (0) for the two covariate (MAR) so we can get BF (missing values for 3 participant 239, 258, 231)
-INST.means$thirsty[is.na(INST.means$thirsty)] <- 0 ; INST.means$hungry[is.na(INST.means$hungry)] <- 0 
+#INST.means$thirsty[is.na(INST.means$thirsty)] <- 0 ; INST.means$hungry[is.na(INST.means$hungry)] <- 0 
 
 INST.means$Trial = as.numeric(INST.means$trial)
 x = lspline(INST.means$Trial, 5); INST.means$Trial1 = x[,1]; INST.means$Trial2 = x[,2]; 
@@ -136,7 +136,7 @@ PIT.means <- aggregate(PIT.clean[,c(covariate, "AUC")] , by = list(PIT.clean$id,
 colnames(PIT.means) <- c('id','condition','session','intervention', 'gender', covariate, "AUC")
 
 #imput mean (0) for the two covariate (MAR) so we can get BF (missing values fot 2 participant 229 and 238)
-PIT.means$thirsty[is.na(PIT.means$thirsty)] <- 0 ; PIT.means$hungry[is.na(PIT.means$hungry)] <- 0 
+#PIT.means$thirsty[is.na(PIT.means$thirsty)] <- 0 ; PIT.means$hungry[is.na(PIT.means$hungry)] <- 0 
 
 
 PIT.p <- summarySEwithin(PIT.clean,
@@ -191,7 +191,29 @@ HED.means <- aggregate(HED[,c(covariate, "fam", "int", "perceived_liking")] , by
 colnames(HED.means) <- c('id','condition','session','intervention', 'gender', covariate, "fam", "int", "perceived_liking")
 
 #imput mean (0) for the two covariate (MAR) so we can get BF (missing values fr 1 participant 217)
-HED.means$thirsty[is.na(HED.means$thirsty)] <- 0 ; HED.means$hungry[is.na(HED.means$hungry)] <- 0 
+#HED.means$thirsty[is.na(HED.means$thirsty)] <- 0 ; HED.means$hungry[is.na(HED.means$hungry)] <- 0 
+
+
+HED.p <- summarySEwithin(HED,
+                         measurevar = "perceived_liking",
+                         withinvars = c("trialxcondition","condition", "session"),
+                         idvar = "id")
+
+HED.p$trial <- as.numeric(HED.p$trialxcondition)
+HED.p = select(HED.p, c('trial', 'N' , 'perceived_liking', 'sd', 'se', 'ci', 'condition',"session"))
+HED.p$condition <- relevel(HED.p$condition, "1") # Make MilkShake first
+
+
+HED.group <- summarySEwithin(HED,
+                             measurevar = "perceived_liking",
+                             withinvars = c("trialxcondition","condition", "session"),
+                             betweenvars = "intervention",
+                             idvar = "id")
+
+HED.group$trial <- as.numeric(HED.group$trialxcondition)
+HED.group = select(HED.group, c('trial', 'N' , 'perceived_liking', 'sd', 'se', 'ci', 'condition', 'intervention',"session"))
+HED.group$condition <- relevel(HED.group$condition, "1") # Make MilkShake first
+
 
 # ALL ---------------------------------------------------------------------
 
@@ -230,11 +252,11 @@ save(dfHED, file = "data/HED_fmri.Rdata")
 # create df for weight loss
 df = subset(PAV.means, session == "1"); df = subset(df, condition == "1")
 df$AGE = df$ageF; df$BMI = df$bmi1 ; df$GENDER = df$gender; df$INTERVENTION = df$intervention
-df$intervention = ifelse(df$intervention == 0, -1, 1) #change value of intervention
-df$gender = ifelse(df$gender == 0, -1, 1) #change value of gender
+#df$intervention = ifelse(df$intervention == -1, -1, 1) #change value of intervention
+#df$gender = ifelse(df$gender == 0, -1, 1) #change value of gender
 
-df$INTERVENTION = as.factor(revalue(as.factor(df$INTERVENTION), c("0"="Placebo", "1"="Liraglutide")))#using pav.means but oculd be any other
-df$GENDER = as.factor(revalue(as.factor(df$GENDER), c("0"="Men", "1"="Women")))
+df$INTERVENTION = as.factor(revalue(as.factor(df$INTERVENTION), c("-1"="Placebo", "1"="Liraglutide")))#using pav.means but oculd be any other
+df$GENDER = as.factor(revalue(as.factor(df$GENDER), c("-1"="Men", "1"="Women")))
 
 med <- gather(df, "feature", "n", 8:22)
 

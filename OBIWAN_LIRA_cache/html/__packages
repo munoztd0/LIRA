@@ -36,3 +36,10 @@ intmed
 stringr
 ggpubr
 cowplot
+caret
+pander
+cmdstanr
+Rcpp
+brms
+tidybayes
+tibble

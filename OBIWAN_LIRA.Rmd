@@ -70,8 +70,8 @@ This file was automatically created via `the Repro package (version 0.1.0)` usin
 
 
 ```{r options, results='hide', message=FALSE, warning=FALSE}
-niter = 500; warm = 100; chains = 4; cores = 4; nsim = 10000 # number of iterations (to change if you want to quick check and warmups #or also parallel::detectCores()/2)
-options(scipen = 666, warn=-1, contrasts=c("contr.sum","contr.poly"), mc.cores = cores);  #remove scientific notation # remove warnings #set contrasts to sum !
+niter = 5000; warm = 1000; chains = 4; cores = 4; nsim = 10000 # number of iterations (to change if you want to quick check and warmups (BUT chains and BF might be really unstable if you have less than 20'000 iter (4x5000) ) #or also parallel::detectCores()/2)
+options(scipen = 666, warn=-1, contrasts=c("contr.sum","contr.poly"), mc.cores = cores)  #remove scientific notation # remove warnings #set contrasts to sum ! #remove scientific notation # remove warnings #set contrasts to sum !
  #cl = parallel::detectCores()/2
 set.seed(666) #set random seed
 control = lmerControl(optimizer ='optimx', optCtrl=list(method='nlminb')) #set "better" lmer optimizer #nolimit # yoloptimizer
@@ -119,7 +119,7 @@ ggplot(med)+
   geom_boxplot(aes(INTERVENTION, n))+
   facet_wrap(~feature, scales = "free")+
   labs(title = "")+
-  theme_fivethirtyeight()+
+   theme_minimal()+
   theme(axis.title = element_text()) + 
   ylab("Biomedical predictor's value (scaled)") + 
   xlab('')
@@ -156,9 +156,9 @@ plot(rfeResults, type=c("g", "o")) # look for the "elbow"
 #### Mediation analysis  {-}
 ```{r mediate, echo=FALSE, include=F}
 
-parallel:::setDefaultClusterOptions(setup_strategy = "sequential")
+#parallel:::setDefaultClusterOptions(setup_strategy = "sequential")
 
-med_res <- intmed::mediate(y = "weightLoss", med = c("GLP_diff" ,  "reelin_diff"),  treat = "intervention", ymodel = "regression", mmodel = c("regression", "regression"), treat_lv = 1, control_lv = 0, incint = TRUE, inc_mmint = FALSE, conf.level = 0.95, data = df, sim = nsim, complete_analysis = TRUE, digits = 3,  summary_report=F) #c = c("age","gender"),
+med_res <- intmed::mediate(y = "weightLoss", med = c("GLP_diff" ,  "reelin_diff"),  treat = "intervention", ymodel = "regression", mmodel = c("regression", "regression"), treat_lv = 1, control_lv = 0, incint = TRUE, inc_mmint = FALSE, conf.level = 0.95, data = df , sim = nsim, complete_analysis = TRUE, digits = 3,  summary_report=F) #c = c("age","gender"),
 
 table <- list.clean(readHTMLTable("res.html"), fun = is.null, recursive = FALSE); table = table[3]$`NULL`[1:6,]
 
@@ -171,7 +171,7 @@ colnames(table)[4] = "p"; table$p = as.numeric(table$p); table$p = ifelse(as.num
 table$p = ifelse(table$p == '<span style=" font-weight: bold; " > 0.000 </span>', "<span style=\" font-weight: bold;    \" >\u003C 0.001</span>", table$p)
 
 
-table %>%
+table[-c(3:4),] %>%
   kbl(caption ="Mediation Analysis: DV = Weight loss, IV = Intervention", escape=F) %>%
   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F)
 
@@ -201,7 +201,6 @@ param = mcmc_plot(object = bmod_full, pars =c("b_.*en", "b_.*ge"), type ="areas"
 
 trace = mcmc_plot(object = bmod_full, pars =c("b_.*en", "b_.*ge"), type ="trace")
 
-
 #check assumptions
 var_group = pp_check(bmod_full, type = "stat_grouped", group = "intervention", binwidth = 0.1, nsamples = NULL) #equality of variance between groups
 
@@ -211,12 +210,12 @@ error = pp_check(bmod_full, type ="error_scatter_avg", nsamples = NULL) # check 
 
 
 #Normality of errors
-residuals <-residuals(bmod_full)[, 1]; res <- qqnorm(residuals, pch = 1, plot.it=F)
+residuals <- residuals(bmod_full)[, 1]; res <- qqnorm(residuals, pch = 1, plot.it=F)
 
 lmx = plot_model(fmod_full, type = "diag"); #diagnostic plots for lmer
 
 #plot all
-diagRT <- ggarrange(param, var_group, rep_fit, error, ncol = 2, nrow = 2)
+diagWEIGHT <- ggarrange(param, var_group, rep_fit, error, ncol = 2, nrow = 2)
 
 annotate_figure(diagWEIGHT, top = text_grob("Diagnostic Plots", face = "bold", size = 10))
 ```
@@ -376,11 +375,11 @@ mf = formula(RT ~ condition*intervention*session + age + gender + BMI_V1  + hung
 
 # -------------------------------------- Bayesian Regression Models using Stan -------------------------------------
 # STAN is a probabilistic programming language that allows you to get full Bayesian statistical inference with MCMC sampling.
-bmod_full = brm(mf, data=PAV.clean, family = exgaussian, prior = c(prior(normal(0, 3), class = "b", coef = ""), prior(normal(0, 100), class = "Intercept", coef = "")), sample_prior = T, save_pars = save_pars(all = TRUE), chains = chains,  iter = niter, warmup = warm, seed = 123, inits = 1, backend = 'cmdstanr', threads = threading(4), max_treedepth=15) # a lot to unwind here..  1) Generic informative prior around 0 for fixed effects and weak prior for the intercept 2) we need to sample priors and save parameters for computing BF  3) account for the skewness of reaction times #family = "exgaussian"
+bmod_full = brm(mf, data=PAV, family = exgaussian, prior = c(prior(normal(0, 3), class = "b", coef = ""), prior(normal(0, 100), class = "Intercept", coef = "")), sample_prior = T, save_pars = save_pars(all = TRUE), chains = chains,  iter = niter, warmup = warm, seed = 123, inits = 1, backend = 'cmdstanr', threads = threading(4), max_treedepth=15) # a lot to unwind here..  1) Generic informative prior around 0 for fixed effects and weak prior for the intercept 2) we need to sample priors and save parameters for computing BF  3) account for the skewness of reaction times #family = "exgaussian"
 
 
 #lmer to compare
-fmod_full = lmer(mf , data = PAV.clean, REML=F, control = control )
+fmod_full = lmer(mf , data = PAV, REML=F, control = control )
 ```
 
 
@@ -425,7 +424,7 @@ full_tab = filter(full_tab, Parameter %notin% c("b_Intercept", "prior_beta", "pr
 
 
 # -------------------------------------- FREQUENTIST STATS: LRT -----------------------------------------------
-measurevar = "RT"
+#measurevar = "RT"
 # formula = "condition*intervention*session"
 # COVA = "+ condition*age + gender + BMI_V1  + thirsty  + hungry +"
 # random = " (condition*session|id) + (1|trialxcondition)"
@@ -477,13 +476,13 @@ print(paste("Bayesian general linear mixed model (exgaussian family with a ident
 
 full_tab
 
-report[c(4,16)]
+report[4]
 
 tables <- list.clean(readHTMLTable("tmp/temp2.html"), fun = is.null, recursive = FALSE)
 tables2 = tables[[1]] %>% janitor::row_to_names(row_number = 1)
 tables2 <- as.matrix(tables2) %>% as_tibble()
 
-
+# check for bad ICC?
 tables2[is.na(tables2)] <- "";  names(tables2) <- NULL; tmp = t(tables2[(length(full_tab$Parameter)+1):(length(full_tab$Parameter)+5),1:2]);
 tmp[,5][1] = "R2"; tmp[,5][2] = gsub(".*/","",tmp[,5][2]); colnames(tmp) =  tmp[1,]
 pander:: pander(tmp[2,])
@@ -580,7 +579,7 @@ Ratings = how pleasant is the clue (0-100, no repetitions)   &   condition = CS+
 mf = formula(liking ~ condition*intervention*session + age + gender + BMI_V1  + hungry + GLP_diff + reelin_diff + (condition*session|id))
 
 # -------------------------------------- Bayesian Regression Models using Stan -------------------------------------
-bmod_full = brm(mf, data=PAV.means, family = gaussian, prior = c(prior(normal(0, 3), class = "b", coef = ""), prior(normal(0, 100), class = "Intercept", coef = "")), sample_prior = T, save_pars = save_pars(all = TRUE), chains = 4,  iter = 5000, warmup = 1000, seed = 123, inits = 1, backend = 'cmdstanr', threads = threading(4))  # a lot to unwind here..  1) Generic weakly informative prior around 0 for fixed effects and very weak prior for the intercept 2) we need to sample priors and save parameters for computing BF  
+bmod_full = brm(mf, data=PAV.means, family = gaussian, prior = c(prior(normal(0, 3), class = "b", coef = ""), prior(normal(0, 100), class = "Intercept", coef = "")), sample_prior = T, save_pars = save_pars(all = TRUE), chains = chains,  iter = niter, warmup = warm, seed = 123, inits = 1, backend = 'cmdstanr', threads = threading(4))  # a lot to unwind here..  1) Generic weakly informative prior around 0 for fixed effects and very weak prior for the intercept 2) we need to sample priors and save parameters for computing BF  
 
 
 #lmer to compare
@@ -677,8 +676,8 @@ tables2 <- as.matrix(tables2) %>% as_tibble()
 
 
 tables2[is.na(tables2)] <- "";  names(tables2) <- NULL; tmp = t(tables2[(length(full_tab$Parameter)+1):(length(full_tab$Parameter)+4),1:2]);
-tmp[,4][1] = "R2"; tmp[,4][2] = gsub(".*/","",tmp[,2][2])
-pander::pander(tmp[,1:2])
+tmp[,4][1] = "R2"; tmp[,4][2] = gsub(".*/","",tmp[,4][2])
+pander::pander(tmp)
 ```
 \
 \
@@ -839,7 +838,7 @@ full_tab = describe_posterior(bmod_full,
 
 full_tab = filter(full_tab, Parameter %notin% c("b_Intercept", "prior_beta", "prior_sigma"))
 
-x = attributes(full_tab); x$clean_parameters[c(2:3,12:15,17:18),5] = c("trial<5",       "trial>5"  , "trial<5:intervention"  , "trial>5:intervention",  "trial<5:session", "trial>5:session", "trial<5:intervention:session" , "trial>5:group:session"); attributes(full_tab) = x
+x = attributes(full_tab); x$clean_parameters[c(2:3,12:15,17:18),5] = c("trial<5",       "trial>5", "trial<5:intervention", "trial>5:intervention","trial<5:session", "trial>5:session", "trial<5:intervention:session", "trial>5:group:session"); attributes(full_tab) = x
 
 
 # -------------------------------------- FREQUENTIST STATS: LRT + Bootstrap  -----------------------------------------------
@@ -847,7 +846,7 @@ x = attributes(full_tab); x$clean_parameters[c(2:3,12:15,17:18),5] = c("trial<5"
 # fmod_spline =  update(fmod_full, ~ .-lspline(trial,5)) #evaluate trial spline
 # 
 # # p-value from bootstrap distribution
-# LRT_spline = PBmodcomp(fmod_full, fmod_spline, nsim = 500, seed = 123, cl=cl)
+# LRT_spline = PBmodcomp(fmod_full, fmod_spline, nsim = 500, seed = 123, cl=cores)
 
 
 # -------------------------------------- Regression table summary --------------------------------------
@@ -864,7 +863,7 @@ print(paste("Bayesian linear mixed model (estimated using MCMC sampling with" ,c
 
 full_tab
 
-report[4,5,7]
+report[4:7]
 
 tables <- list.clean(readHTMLTable("tmp/temp4.html"), fun = is.null, recursive = FALSE)
 tables2 = tables[[1]] %>% janitor::row_to_names(row_number = 1)
@@ -914,8 +913,8 @@ pp <-  ggplot(dfTRIAL, aes(x =trial, y = grips)) +
   theme_bw() +
   facet_wrap(~session, labeller=labeller(session = labels))
 
-pp + html_theme + theme(legend.position=c(.9,.88))
-plt = pp + averaged_theme + theme(legend.position=c(.9,.88))
+pp + html_theme + theme(legend.position=c(.9,.88)+axis.text.x = element_text(size = 14))
+plt = pp + averaged_theme + theme(legend.position=c(.9,.88)+axis.text.x = element_text(size = 14))
 
 ```
 \
@@ -989,7 +988,7 @@ full_tab = filter(full_tab, Parameter %notin% c("b_Intercept", "b_hu_Intercept",
 # fmod_cond = update(fmod_full,  ~ .-condition) #evaluate condition
 
 # # p-value from bootstrap distribution
-# LRT_cond = PBmodcomp(fmod_full, fmod_cond, nsim = 500, seed = 123, cl=cl) 
+# LRT_cond = PBmodcomp(fmod_full, fmod_cond, nsim = 500, seed = 123, cl=cores) 
 
 # -------------------------------------- Regression table summary --------------------------------------
 
@@ -1023,7 +1022,7 @@ pander::pander(tmp)
 #### Plot {-}
 
 
-```{r PIT_plot, warning=FALSE,  message = FALSE, results='hide', fig.align="center", fig.cap="A) Posterior distribution by group. B) Highest density interval (90% HDI) for the interaction condition by sessioon"}
+```{r PIT_plot, warning=FALSE,  message = FALSE, results='hide', fig.align="center", fig.cap="A) Posterior distribution by group. B) Highest density interval (90% HDI) for the interaction condition by session"}
 
 # plot HDI
 dfdraws = bmod_full %>%
@@ -1115,9 +1114,9 @@ pp <- ggplot(PIT.p, aes(x = as.numeric(trial), y = AUC,
   ylab('Mobilized effort (a.u.)')+
   xlab('Trial')+
   scale_color_manual(labels = c('-1'= 'CS-', "1" = 'CS+'), name="",
-                     values = c("1"= pal[2], '-1'= pal[1])) +
+                     values = c("1"= pal[6], '-1'= pal[1])) +
   scale_fill_manual(labels = c('-1'= 'CS-', "1" = 'CS+'), name="",
-                    values = c("1"= pal[2], '-1'= pal[1])) +
+                    values = c("1"= pal[6], '-1'= pal[1])) +
   scale_y_continuous(expand = c(0, 0),  limits = c(50,200),  breaks=c(seq.int(50,200, by = 50))) +
   scale_x_continuous(expand = c(0, 0),  limits = c(0,15),  breaks=c(seq.int(1,15, by = 2))) +
     scale_shape_manual(name="Group", labels=c("Placebo", "Liraglutide"), values = c(1, 2, 18)) +
@@ -1177,57 +1176,148 @@ bmod_full = brm(bf(mf, hu ~ 1), family = hurdle_gaussian, stanvars = stanvars, d
 fmod_full = lmer(mf , data = HED, REML=F, control = control)
 
 ```
-```{r HED, echo=FALSE, include=FALSE, cache=TRUE, warning=F}
-measurevar = "lik"
-formula = "condition*intervention*session"
-COVA = "+ age + gender + BMI_V1  + thirsty  + hungry + int  + fam +"
-#COVA = "+ age + gender + BMI_V1  + thirsty  + hungry + int  + condition*intervention*session*Fast_glu +"
-random = " (condition*session| id) + (1|trialxcondition)"
 
-#method LRT
-model = mixed(as.formula(paste(measurevar, paste (formula, COVA, random), sep="~")), data = HED, method = "LRT", control = control, REML = FALSE); model
-table = nice(model);  ref_grid(model)  #triple check everything is centered at 0
 
-mod =  lmer(as.formula(paste(measurevar, paste (formula, COVA, random), sep="~")), data = HED, control = control)
-tab_model(mod, show.p = F,show.intercept = F, show.se = T, title ="", show.re.var = F, digits = 2, dv.labels = "Perceived liking", emph.p = TRUE, file = "tmp/temp5.html")
+```{r message = FALSE, results='hide', fig.align="center", out.width = "100%", dpi = 200}
+
+## plot population-level effects posterior distributions and chain sampling
+param = mcmc_plot(object = bmod_full,  pars =c("b_.*o", "b_.*y", "b_.*ge", "b_.*diff", "b_.*V1", "b_int", "b_fam"), type ="areas")  # int and fam
+
+trace = mcmc_plot(object = bmod_full,  pars =c("b_.*o", "b_.*y", "b_.*ge", "b_.*diff", "b_.*V1", "b_int", "b_fam"), type ="trace")
+
+
+#check assumptions
+var_group = pp_check(bmod_full, type = "stat_grouped", stat = "median", group = "intervention", binwidth = 0.1, nsamples = NULL) #equality of variance between groups
+
+rep_fit = pp_check(bmod_full, nsamples = 10) # check response fit 
+
+error = pp_check(bmod_full, type ="error_scatter_avg", nsamples = NULL) # check good alignment between model and data, and no obvious pattern to the types of errors we are getting.
+
+
+#Normality of errors
+residuals <-residuals(bmod_full)[, 1]; res <- qqnorm(residuals, pch = 1, plot.it=F)
+
+lmx = plot_model(fmod_full, type = "diag"); #diagnostic plots for lmer
+
+#plot all
+diagPIT <- ggarrange(param, var_group, rep_fit, error, ncol = 2, nrow = 2)
+
+annotate_figure(diagPIT, top = text_grob("Diagnostic Plots", face = "bold", size = 10))
+# check response fit -> capture better the weird (bimodal at least..) distrib
+# residual ... could be better but at least it's MUCH better than simple gaussian see lmx[1] ... this is just catastrophic..
 ```
-\
-```{r HED_mod}
-tables <- list.clean(readHTMLTable("tmp/temp5.html"), fun = is.null, recursive = FALSE)
+
+
+
+```{r HED_res, include=FALSE, cache=F}
+
+full_tab = describe_posterior(bmod_full,
+                   estimate = "median", dispersion = T,
+                   ci = .9, ci_method = "hdi",
+                   bf_prior = bmod_full, diagnostic = "Rhat",  
+                   test = c("p_direction", "bf"))
+
+
+
+full_tab = filter(full_tab, Parameter %notin% c("b_Intercept", "b_hu_Intercept", "prior_sigma"))
+
+
+#contrasts 
+# emmip(bmod_full, condition~intervention) to visualize
+# 
+# ems = emmeans(bmod_full, ~condition|intervention)
+# con_inter = contrast(ems, interaction = "pairwise", by = NULL)
+# 
+# 
+# inter_tab = describe_posterior(con_inter,
+#                    estimate = "median", dispersion = TRUE,
+#                    ci = .9, ci_method = "hdi",
+#                    bf_prior = bmod_full, diagnostic = "Rhat",  
+#                    test = c("p_direction", "bf"))
+
+
+
+# -------------------------------------- FREQUENTIST STATS: LRT + Bootstrap  -----------------------------------------------
+
+# fmod_cond = update(fmod_full,  ~ .-condition) #evaluate condition
+
+# # p-value from bootstrap distribution
+# LRT_cond = PBmodcomp(fmod_full, fmod_cond, nsim = 500, seed = 123, cl=cores) 
+
+# -------------------------------------- Regression table summary --------------------------------------
+
+tab_model(bmod_full, show.p = F,show.intercept = F, show.se = T, title ="", show.re.var = F, digits = 3, dv.labels = "Perceived liking", file = "tmp/temp6.html", transform = NULL,  rm.terms = "hu_Intercept")
+
+report = capture.output(sexit(bmod_full, ci=.9))
+
+```
+
+
+```{r HED_tab}
+print(paste("Bayesian general linear mixed model (hurdle gaussian family with a identity link) (estimated using MCMC sampling with", chains," chains of", niter, " iterations and a warmup of", warm, ") to predict Perceived Liking with condition, intervention, session, age, gender, BMI_V1, hungry, GLP_diff and reelin_diff (formula: perceived_liking ~ condition * intervention * session + age + gender + BMI_V1 + hungry + GLP_diff + reelin_diff + int + fam). The model included condition, session, id and trialxcondition as random effects (formula: list(~condition | id, ~1 | trialxcondition)). Priors over parameters were set as normal (mean = 0.00, SD = 3.00) and student_t (location = 0.00, scale = 31.7) distributions for beta and sd respectively"))
+            
+
+full_tab
+
+report[5]
+
+
+tables <- list.clean(readHTMLTable("tmp/temp6.html"), fun = is.null, recursive = FALSE)
 tables2 = tables[[1]] %>% janitor::row_to_names(row_number = 1)
+tables2 <- as.matrix(tables2) %>% as_tibble(); 
 
-tables2 <- as.matrix(tables2) %>% as_tibble()
-tables2[is.na(tables2)] <- ""
-tables3 = tables2[1:length(table$Effect),1:4] 
-tables3[5] = str_split(gsub("[^0-9.,-]", "", table[3]), ",")[[1]]; tables3[6] = as.numeric(str_split(gsub("[^0-9.,-]", "", table[4]), ",")[[1]]); 
-tables3$...6 = ifelse(tables3$...6 < 0.05,paste("<span style=\" font-weight: bold; \" >" ,sprintf("%.3f",tables3$...6), "</span>"),  paste("<span>" ,sprintf("%.3f",tables3$...6), "</span>"))
-colnames(tables3)[5] = "\u03C7\u00B2"; colnames(tables3)[6] = "p"
-tables3$p[1]= "<span style=\" font-weight: bold;    \" >\u003C 0.001</span>"
-tables3  %>% kbl(caption ="Perceived liking",escape = F ) %>%
-  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(0,bold=T,align='c')
-tmp = tables2[(length(table$Effect)+1):(length(table$Effect)+5),1:2]
-names(tmp) <- NULL
-tmp1 <- data.frame(t(tmp[-1]))
-colnames(tmp1) <- tmp[[1]]
-tmp1 %>% kbl(digits = 2) %>%
-  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) 
+tables2[is.na(tables2)] <- "";  names(tables2) <- NULL; tmp = t(tables2[(length(full_tab$Parameter)+1):(length(full_tab$Parameter)+5),1:2]);
+tmp[,5][1] = "R2"; tmp[,5][2] = gsub(".*/","",tmp[,5][2])
+pander::pander(tmp)
+```
 
-```
-\
-```{r message = FALSE, echo=FALSE, results='hide', fig.show="hold", out.width="25%", fig.align="center", fig.cap = 'Model assumptions.', warning=F}
-x = plot_model(mod, type = "diag")
-x[-c(2)]
-x[2][[1]]$id
- #check assumptions
-```
-\
-\
-```{r HED_plot, echo=FALSE, warning=FALSE, cache=TRUE, fig.align="center", fig.cap="Perceived liking (Taste) by solution."}
+#### Plot {-}
+
+```{r HED_plot, warning=FALSE,  message = FALSE, results='hide', fig.align="center", fig.cap="A) Posterior distribution by group. B) Highest density interval (90% HDI) for the interaction condition by session"}
+
+# plot HDI
+dfdraws = bmod_full %>%
+    spread_draws(`b_condition` )
+
+HDI_HED = plotHDI( dfdraws$`b_condition` , credMass = .90, binSize = 100, Title = "") + theme_bw()
+
+
+#plot estimated means from posterior distribution from the model draws
+
+
+dfdraws2 =  bmod_full %>%
+     emmeans(~ condition) %>%
+     gather_emmeans_draws() 
+
+
+pp = dfdraws2 %>% #diff
+    ggplot(aes(x = as.factor(condition) , y = .value,  fill = as.factor(condition))) +
+    #geom_abline(slope= 0, intercept=0, linetype = "dashed", color = "black") +
+    #geom_point(position = "jitter") +
+    stat_slab(.width = c(0.50, 0.9), position="dodge", alpha=0.5) +
+    stat_pointinterval(.width = c(0.50, 0.9),position="dodge") +
+    labs(x = "", y = "Perceived liking", title = "") + 
+    scale_fill_manual(values=c("-1" = pal[1],"1"=pal[3]), guide="none") +
+    scale_color_manual( values=c("-1" = pal[1],"1"=pal[3]), guide="none") +
+    scale_x_discrete(labels=c("Tasteless", "Milkshake")) +
+    scale_y_continuous(expand = c(0, 0), breaks = c(seq.int(0,100, by = 20)), limits = c(-0.5,100.5)) +
+    theme_bw()
+
+
+plt_bayes_html = pp + html_theme 
+plt_bayes = pp + averaged_theme 
+
+
+figureHED <- ggarrange(plt_bayes_html, HDI_HED,
+                    labels = c("A", "B"),
+                    ncol = 2)
+#figureHED
+
 
 # AVERAGED EFFECT
 dfH <- summarySEwithin(HED.means,
-                       measurevar = "lik",
-                       withinvars = c("condition","session"), 
+                       measurevar = "perceived_liking",
+                       withinvars = c("condition","session"),
                        idvar = "id")
 
 dfH$cond <- ifelse(dfH$condition == "1", -0.25, 0.25)
@@ -1236,13 +1326,13 @@ HED.means <- HED.means %>% mutate(condjit = jitter(as.numeric(cond), 0.3),
                                   grouping = interaction(id, cond))
 
 
-pp <- ggplot(HED.means, aes(x = cond, y = lik, 
-                            fill = condition, color = condition)) +
+pp <- ggplot(HED.means, aes(x = cond, y = perceived_liking,
+                            fill = as.factor(condition), color = as.factor(condition))) +
   geom_point(data = dfH, alpha = 0.5) +
-  geom_line(aes(x = condjit, group = id, y = lik), alpha = .3, size = 0.5, color = 'gray') +
-  geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(fill = condition, color = NA))+
-  geom_point(aes(x = condjit, shape = intervention), alpha = .3,) +
-  geom_crossbar(data = dfH, aes(y = lik, ymin=lik-se, ymax=lik+se), width = 0.2 , alpha = 0.1)+
+  geom_line(aes(x = condjit, group = id, y = perceived_liking), alpha = .3, size = 0.5, color = 'gray') +
+  geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(fill = as.factor(condition), color = NA))+
+  geom_point(aes(x = condjit, shape = as.factor(intervention)), alpha = .3,) +
+  geom_crossbar(data = dfH, aes(y = perceived_liking, ymin=perceived_liking-se, ymax=perceived_liking+se), width = 0.2 , alpha = 0.1)+
   ylab('Perceived liking') +
   xlab('Taste') +
   scale_y_continuous(expand = c(0, 0), breaks = c(seq.int(0,100, by = 20)), limits = c(-0.5,100.5)) +
@@ -1256,32 +1346,112 @@ pp <- ggplot(HED.means, aes(x = cond, y = lik,
 pp + html_theme +theme(legend.position=c(.96,.94))
 plt = pp + averaged_theme +theme(legend.position=c(.96,.94))
 ```
+
+
+```{r HED_time, warning=FALSE,  message = FALSE, results='hide', fig.align="center", fig.cap="Perceived liking for each condition and group over trials."}
+
+
+# PLOT OVERTIME
+
+
+pp <- ggplot(HED.p, aes(x = as.numeric(trial), y = perceived_liking,
+                        color = condition,
+                        fill  = condition))+
+    geom_point(data = HED.group, aes(shape = intervention, color = condition), alpha = 0.3) +
+  geom_line(alpha = .5, size = 1, show.legend = F) +
+  geom_ribbon(aes(ymax = perceived_liking + se, ymin = perceived_liking - se),  alpha=0.4) +
+  geom_point() +
+  ylab('Perceived Liking')+
+  xlab('Trial')+
+  scale_color_manual(labels = c('Pleasant', 'Neutral'), name = "",
+                     values = c( "1" =pal[3], '-1' =pal[1])) +
+  scale_fill_manual(labels = c('Pleasant', 'Neutral'), name = "",
+                    values = c( "1" =pal[3], '-1'=pal[1])) +
+  scale_y_continuous(expand = c(0, 0),  limits = c(0,100),  breaks=c(seq.int(0,100, by = 20))) +
+    scale_x_continuous(expand = c(0, 0),  limits = c(0,21),  breaks=c(seq.int(1,21, by = 2))) +
+  guides(color=guide_legend(override.aes=list(fill=c(pal[3], pal[1]), color=c(pal[3], pal[1]))))+
+    scale_shape_manual(name="Group", labels=c("Placebo", "Liraglutide"), values = c(1, 2, 18)) +
+  theme_bw() +
+  facet_wrap(~session, labeller=labeller(session =labels))
+
+
+pp + html_theme + theme(strip.background = element_rect(fill="white"), legend.justification = "top", legend.position="right", axis.text.x = element_text(size = 14))
+plt = pp + averaged_theme + theme(strip.background = element_rect(fill="white"), axis.text.x = element_text(size = 14), legend.justification = "top", legend.position="right")
+
+
+
+##We see here the base difference between Placebo VS Liraglutide BUT it's the same for both sessions so .. no effect of the treatment really XXXX
+
+# bmod_time = update(bmod_full,  ~ .+as.factor(trialxcondition)) #evaluate interaction
+# 
+# df =  bmod_time %>%
+#      emmeans(~ condition:session:trialxcondition) 
+# 
+# 
+# 
+# bayes_plt = as_tibble(df) %>%
+#     ggplot(aes(x = trialxcondition, y = emmean,  fill =as.factor(condition))) +
+#     #geom_point(position = "jitter") +
+#     geom_smooth(method=loess, se = T,inherit.aes = T) + 
+#     #stat_slab(.width = c(0.50, 0.95),position="dodge", alpha=0.5) +
+#     #stat_pointinterval(.width = c(0.50, 0.95),position="dodge") +
+#     ylab('Mobilized effort (a.u.) \n Baseline corrected')+
+#     xlab('')+
+#     scale_fill_manual(values=c("1" = pal[2],"-1"=pal[1]), guide="none") +
+#     scale_color_manual( values=c("1" = pal[2],"-1"=pal[1]), guide="none") +
+#     #scale_x_discrete(labels=c("CS+", "CS-")) +
+#     theme_bw() + facet_wrap(~session, labeller=labeller(session =labels))
+
+```
 \
 \
-```{r HED_saveFIG, echo=FALSE, include = FALSE, warning=FALSE}
+```{r HED_save, echo=FALSE, include = FALSE, warning=FALSE}
 cairo_pdf('figures/Figure_HED_Lira.pdf')
 print(plt)
+dev.off()
+
+cairo_pdf('figures/Figure_HED_Lira_Bayes.pdf')
+print(figureHED)
 dev.off()
 ```
 
 
 
-
 # fMRI Analysis
+
+```{bash}
+cwd=$(pwd)
+cd ~/OBIWAN/DERIVATIVES/GLM/AFNI/hedonicreactivity/LIRA/ # go to fMRI directory
+
+
+#I invite to take a look at the script
+nohup bash -x HED.txt |& tee diary.txt & # runs the AFNI group analysis script in the background and output logs as it goes in the "diary.txt" file
+
+
+#Convert from AFNI format to NIFTI #-prefix test lme+tlrc[i]
+for i in  8 10 12
+  do 3dAFNItoNIFTI -prefix LME_8_con${i}_z LME_8+tlrc[${i}]
+     fslmaths LME_8_con${i}_z -ztop -add -1 -mul -1 LME_8_con${i}_1-p # convert to pvalue then inverse it for display 
+done
+
+cd $cwd
+
+```
+
 check out "analysis_LIRA_fMRI.R" for more details
 ```{r HED_fmri, echo=FALSE, include = FALSE, warning=FALSE}
 
 mdl.hf = aov_car(data = inter, HF_inter ~ intervention + BMI_diff + age + Error(id), factorize = F, type = "II", anova_table = list(correction = "GG", es = "pes"))
- 
+
 res = nice(mdl.hf, MSE=F); ref_grid(mdl.hf)  #triple check everything is centered at 0
 
 
 #calculate Partial eta-squared and its 90 % CI for each effect
-PES.hf = pes_ci(data = inter, HF_inter ~ intervention + BMI_diff + age + Error(id), conf.level = .90, factorize = FALSE, anova.type = "II", epsilon="none") ;  
+PES.hf = pes_ci(data = inter, HF_inter ~ intervention + BMI_diff + age + Error(id), conf.level = .90, factorize = FALSE, anova.type = "II", epsilon="none") ;
 mdl.hf.emms = emmeans(mdl.hf, pairwise ~ intervention)
 
 ```
-Contrast Post > Pre in HF 
+Contrast Post > Pre in HF
 \
 ```{r HED_fmri_res, message=F, warning=F}
 res$p.value = as.numeric(res$p.value)
@@ -1294,7 +1464,7 @@ res$p.value[1]= "<span style=\" font-weight: bold;    \" >\u003C 0.001</span>"
 #res$pes[c(5,7,8)]= c("\u003C 0.001")
 colnames(res)[3:5] = c( paste("F(", res$df[1], ")", sep=""),"&eta;<sub>p</sub><sup>2</sup>", "p")
 res[c(1,4,6,3,5)]  %>% kbl(digits = 2, escape = F,row.names = F)  %>%
-  kable_styling(latex_options = "striped", position = "center", full_width = F) 
+  kable_styling(latex_options = "striped", position = "center", full_width = F)
 #print('PES: intervention: Overall higher weight loss for treament (Liraglutide) group')
 #PES.weight[1,]
 ```
@@ -1306,142 +1476,154 @@ x[c(2,3,4,1)]
 ```
 \
 \
-```{r HED_fmri_plot, echo=FALSE,  message=FALSE, cache=TRUE, fig.align="right", fig.cap="Beta estimates from hippocampal formation during Hedonic reactivity test (Post > Pre) by intervention and correlation with weight loss.", warning=F}
-sp = ggplot(inter, aes(x = `Weight Loss`, y = HF_inter, color = intervention)) +
-  stat_ellipse(aes(group=intervention)) +  geom_point(alpha = .3, size = 3) + 
-  geom_smooth(method= lm,aes(color = NULL), alpha = 0.5 ) +
-  scale_color_manual(name="Intervention", labels = c("Placebo", "Liraglutide"), values=c("0"=pal[1], "1"=pal[6])) +
-  theme_bw()+ 
-  #stat_cor(aes(color=NULL, label = paste(..rr.label.., sep = "~`,`~")),label.x = 5, label.y = -2.5)+ labs(color = "Intervention")   +  # to add Rsquared 
-  guides(color = guide_legend(override.aes = list(fill=NA, size = c(2.5,2.5), linetype = c(0, 0),label = "") ) ) +   ylab('HF Beta estimates (a.u.)') +   xlab('Weight loss (\u0394 BMI)') +   theme(legend.title = element_text(size =12), legend.text = element_text(size = 10), axis.title.x = element_text(size = 24), axis.title.y = element_text(size =  24), legend.position = c(0.94, 0.9)) + 
-  border()   
+<!-- ```{r HED_fmri_plot, echo=FALSE,  message=FALSE, cache=TRUE, fig.align="right", fig.cap="Beta estimates from hippocampal formation during Hedonic reactivity test (Post > Pre) by intervention and correlation with weight loss.", warning=F} -->
+<!-- sp = ggplot(inter, aes(x = `Weight Loss`, y = HF_inter, color = intervention)) + -->
+<!--   stat_ellipse(aes(group=intervention)) +  geom_point(alpha = .3, size = 3) +  -->
+<!--   geom_smooth(method= lm,aes(color = NULL), alpha = 0.5 ) + -->
+<!--   scale_color_manual(name="Intervention", labels = c("Placebo", "Liraglutide"), values=c("0"=pal[1], "1"=pal[6])) + -->
+<!--   theme_bw()+  -->
+<!--   #stat_cor(aes(color=NULL, label = paste(..rr.label.., sep = "~`,`~")),label.x = 5, label.y = -2.5)+ labs(color = "Intervention")   +  # to add Rsquared  -->
+<!--   guides(color = guide_legend(override.aes = list(fill=NA, size = c(2.5,2.5), linetype = c(0, 0),label = "") ) ) +   ylab('HF Beta estimates (a.u.)') +   xlab('Weight loss (\u0394 BMI)') +   theme(legend.title = element_text(size =12), legend.text = element_text(size = 10), axis.title.x = element_text(size = 24), axis.title.y = element_text(size =  24), legend.position = c(0.94, 0.9)) +  -->
+<!--   border()    -->
 
-xplot <- ggdensity(inter, "Weight Loss", fill = "intervention") +   scale_fill_manual(values=c("0"= pal[1], "1"=pal[6])) 
-yplot <- ggdensity(inter, "HF_inter", fill = "intervention")  + scale_fill_manual(values=c("0"= pal[1], "1"=pal[6])) + rotate()
+<!-- xplot <- ggdensity(inter, "Weight Loss", fill = "intervention") +   scale_fill_manual(values=c("0"= pal[1], "1"=pal[6]))  -->
+<!-- yplot <- ggdensity(inter, "HF_inter", fill = "intervention")  + scale_fill_manual(values=c("0"= pal[1], "1"=pal[6])) + rotate() -->
 
-# Cleaning the plots
-yplot <- yplot + clean_theme() + rremove("legend") 
-xplot <- xplot + clean_theme() + rremove("legend")
+<!-- # Cleaning the plots -->
+<!-- yplot <- yplot + clean_theme() + rremove("legend")  -->
+<!-- xplot <- xplot + clean_theme() + rremove("legend") -->
 
-fig = cowplot::plot_grid(xplot, NULL, sp, yplot,ncol = 2, align = "hv", rel_widths = c(2, 1), rel_heights = c(1, 2))
-fig
+<!-- fig = cowplot::plot_grid(xplot, NULL, sp, yplot,ncol = 2, align = "hv", rel_widths = c(2, 1), rel_heights = c(1, 2)) -->
+<!-- fig -->
+<!-- ``` -->
+<!-- ```{r HED_fmri_saveFIG, echo=FALSE, include = FALSE, warning=FALSE} -->
+<!-- cairo_pdf('figures/Figure_HED_fmri_Weight_HF.pdf') -->
+<!-- print(fig) -->
+<!-- dev.off() -->
+<!-- ``` -->
+
+<!-- ```{r hpp_mediation, cache=T, echo=FALSE, include = FALSE, warning=FALSE} -->
+<!-- inter_res <- intmed::mediate(y = "`Weight Loss`", med = "HF", c = c("age"), treat = "Intervention", ymodel = "regression", mmodel = "regression", treat_lv = 1, control_lv = 0, conf.level = 0.95, data = inter, complete_analysis = T, digits = 3, summary_report=F) -->
+
+<!-- tables <- list.clean(readHTMLTable("res.html"), fun = is.null, recursive = FALSE) -->
+
+<!-- #just to plot -->
+<!-- medi =  psych::mediate(`Weight Loss` ~ Intervention + (HF) -age, data = inter, plot=F) -->
+<!-- ``` -->
+
+<!-- \ -->
+<!-- ```{r hpp_mediate_res, echo=FALSE, include=T} -->
+<!-- table = tables[[3]] -->
+<!-- table$Estimates = unlist(str_split(gsub("[^0-9.,-]", "", table$Estimates), ",")) -->
+
+<!-- table$`p-value` = as.numeric(table$`p-value`); table$`p-value` = ifelse(as.numeric(table$`p-value`) < 0.05,paste("<span style=\" font-weight: bold; \" >" ,sprintf("%.3f",table$`p-value`), "</span>"),  paste("<span>" ,sprintf("%.3f",table$`p-value`), "</span>")) -->
+
+<!-- table[2:3,4] = "<span style=\" font-weight: bold; \" > \u003C 0.001 <span>" -->
+<!-- colnames(table)[4] = "p" -->
+<!-- table$p[4] = "" -->
+<!-- table %>% -->
+<!--   kbl(caption ="Mediation Analysis: DV = Weight loss, IV = HF activity during reward consumption", escape =F) %>% -->
+<!--   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) -->
+<!-- ``` -->
+<!-- ```{r , fig.align="center", fig.cap="Mediation path.", fig.height = 2, fig.width = 7} -->
+<!-- par(mar=c(0,0,0,0)); psych::mediate.diagram(medi, show.c = F, main= "", ylim=c(4.5,7.3)) -->
+<!-- text(3, 6.5, "A ***",  cex = .8); text(7, 6.5, "B *",  cex = .8);  text(5.8, 4.9, "***",  cex = .8); text(5, 6.7, "AB *",  cex = .8) -->
+<!-- ``` -->
+<!-- \ -->
+<!-- ```{r HED_fmri_plot_HF, echo=FALSE,  message=FALSE, cache=TRUE, fig.align="right", fig.cap="Beta estimates from hippocampal formation during Hedonic reactivity testby session by intervention.", warning=F} -->
+<!-- # AVERAGED EFFECT ------------- -->
+<!-- dfH <- summarySEwithin(HED_fMRI, -->
+<!--                        measurevar = "HF_score", -->
+<!--                        withinvars = "session", -->
+<!--                        betweenvars = "intervention", -->
+<!--                        idvar = "id") -->
+
+<!-- labels <- c("0" = "Placebo", "1" = "Liraglutide") -->
+
+<!-- HED_fMRI$intervention = as.factor(HED_fMRI$intervention) -->
+
+<!-- dfH$cond <- ifelse(dfH$session == "pre", -0.25, 0.25) -->
+<!-- HED_fMRI$cond <- ifelse(HED_fMRI$session == "pre", -0.25, 0.25) -->
+<!-- HED_fMRI <- HED_fMRI %>% mutate(condjit = jitter(as.numeric(cond), 0.3), -->
+<!--                                   grouping = interaction(id, cond)) -->
+
+
+<!-- pp <- ggplot(HED_fMRI, aes(x = cond, y = HF_score,  fill = intervention, color = intervention)) + -->
+<!--   geom_hline(yintercept = 0, lty=2) + -->
+<!--   geom_point(data = dfH, alpha = 0.5) + -->
+<!--   geom_line(aes(x = condjit, group=id), alpha = 0.2) + -->
+<!--   geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(group = session, fill = intervention, color = NA))+ -->
+<!--   geom_point(aes(x = condjit), alpha = .3) + -->
+<!--   geom_crossbar(data = dfH, aes(y = HF_score, ymin=HF_score-se, ymax=HF_score+se), width = 0.2 , alpha = 0.1)+ -->
+<!--   ylab('Beta estimates HF (a.u.)') + -->
+<!--   xlab('') + -->
+<!--   #scale_y_continuous(expand = c(0, 0), breaks = c(seq.int(0,100, by = 20)), limits = c(-0.5,100.5)) + -->
+<!--   scale_x_continuous(labels=c("Pre", "Post"),breaks = c(-.25,.25), limits = c(-.5,.5)) + -->
+<!--   scale_fill_manual(values=c("0"= pal[1], "1"=pal[6]), guide = 'none') + -->
+<!--   scale_color_manual(values=c("0"=pal[1], "1"=pal[6]), guide = 'none') + -->
+<!--   theme_bw()+ facet_wrap(~intervention, labeller=labeller(intervention = labels)) -->
+
+
+<!-- ppp <- pp + averaged_theme -->
+<!-- pp + html_theme -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- cairo_pdf('figures/Figure_HED_fmri_HF.pdf') -->
+<!-- print(ppp) -->
+<!-- dev.off() -->
+<!-- ``` -->
+
+<!-- ```{r HED_fmri_plot_OFC, echo=FALSE,  message=FALSE, cache=TRUE, fig.align="right", fig.cap="Beta estimates from OFC during Hedonic reactivity test by session by intervention."} -->
+<!-- # AVERAGED EFFECT ------------- -->
+<!-- dfH <- summarySEwithin(HED_fMRI, -->
+<!--                        measurevar = "OFC_score", -->
+<!--                        withinvars = "session", -->
+<!--                        betweenvars = "intervention", -->
+<!--                        idvar = "id") -->
+
+<!-- labels <- c("0" = "Placebo", "1" = "Liraglutide") -->
+
+<!-- HED_fMRI$intervention = as.factor(HED_fMRI$intervention) -->
+
+<!-- dfH$cond <- ifelse(dfH$session == "pre", -0.25, 0.25) -->
+<!-- HED_fMRI$cond <- ifelse(HED_fMRI$session == "pre", -0.25, 0.25) -->
+<!-- HED_fMRI <- HED_fMRI %>% mutate(condjit = jitter(as.numeric(cond), 0.3), -->
+<!--                                   grouping = interaction(id, cond)) -->
+
+
+<!-- pp <- ggplot(HED_fMRI, aes(x = cond, y = OFC_score,  fill = intervention, color = intervention)) + -->
+<!--   geom_hline(yintercept = 0, lty=2) + -->
+<!--   geom_point(data = dfH, alpha = 0.5) + -->
+<!--   geom_line(aes(x = condjit, group=id), alpha = 0.2) + -->
+<!--   geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(group = session, fill = intervention, color = NA))+ -->
+<!--   geom_point(aes(x = condjit), alpha = .3) + -->
+<!--   geom_crossbar(data = dfH, aes(y = OFC_score, ymin=OFC_score-se, ymax=OFC_score+se), width = 0.2 , alpha = 0.1)+ -->
+<!--   ylab('Beta estimates OFC (a.u.)') + -->
+<!--   xlab('') + -->
+<!--   #scale_y_continuous(expand = c(0, 0), breaks = c(seq.int(0,100, by = 20)), limits = c(-0.5,100.5)) + -->
+<!--   scale_x_continuous(labels=c("Pre", "Post"),breaks = c(-.25,.25), limits = c(-.5,.5)) + -->
+<!--   scale_fill_manual(values=c("0"= pal[1], "1"=pal[6]), guide = 'none') + -->
+<!--   scale_color_manual(values=c("0"=pal[1], "1"=pal[6]), guide = 'none') + -->
+<!--   theme_bw()+ facet_wrap(~intervention, labeller=labeller(intervention = labels)) -->
+
+
+<!-- ppp <- pp + averaged_theme -->
+<!-- pp + html_theme -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- cairo_pdf('figures/Figure_HED_fmri_OFC.pdf') -->
+<!-- print(ppp) -->
+<!-- dev.off() -->
+<!-- ``` -->
+
+
+#### Packages {-}
+```{r, warning=F}
+report::report_packages()
+
+# aaronpeikert/repro@devel #repro, crsh/papaja@devel,knitr, afex #aov_car/lmer, emmeans #emmeans, parallel #detectCores, tidyverse ##ggplot/dplyr/plyr/tidyr, car #densityPlot, lspline # lspline, JWileymisc #egtable, kableExtra #kable_styling, glmnet #cv.glmnet, ggthemes #theme_fivethirtyeight,  MBESS #pes_ci, sjPlot #tab_model/plot_model, Rmisc #SummarySEwithin, janitor #row_to_names, rlist #list.clean, sessioninfo #sessioninfo, stringr #str_list, XML #readHTMLtable, bayestestR #bayesfactor_models, cmdstanr #multithead, ggpubr::ggarrange	#	Arrange Multiple ggplots, tidybayes #spread draws]  
 ```
-```{r HED_fmri_saveFIG, echo=FALSE, include = FALSE, warning=FALSE}
-cairo_pdf('figures/Figure_HED_fmri_Weight_HF.pdf')
-print(fig)
-dev.off()
+```{bash, include=F}
+cp OBIWAN_LIRA.html index.html #this is just to change the output name for github
 ```
 
-```{r hpp_mediation, cache=T, echo=FALSE, include = FALSE, warning=FALSE}
-inter_res <- intmed::mediate(y = "`Weight Loss`", med = "HF", c = c("age"), treat = "Intervention", ymodel = "regression", mmodel = "regression", treat_lv = 1, control_lv = 0, conf.level = 0.95, data = inter, complete_analysis = T, digits = 3, summary_report=F)
-
-tables <- list.clean(readHTMLTable("res.html"), fun = is.null, recursive = FALSE)
-
-#just to plot
-medi =  psych::mediate(`Weight Loss` ~ Intervention + (HF) -age, data = inter, plot=F)
-```
-
-\
-```{r hpp_mediate_res, echo=FALSE, include=T}
-table = tables[[3]]
-table$Estimates = unlist(str_split(gsub("[^0-9.,-]", "", table$Estimates), ","))
-
-table$`p-value` = as.numeric(table$`p-value`); table$`p-value` = ifelse(as.numeric(table$`p-value`) < 0.05,paste("<span style=\" font-weight: bold; \" >" ,sprintf("%.3f",table$`p-value`), "</span>"),  paste("<span>" ,sprintf("%.3f",table$`p-value`), "</span>"))
-
-table[2:3,4] = "<span style=\" font-weight: bold; \" > \u003C 0.001 <span>"
-colnames(table)[4] = "p"
-table$p[4] = ""
-table %>%
-  kbl(caption ="Mediation Analysis: DV = Weight loss, IV = HF activity during reward consumption", escape =F) %>%
-  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F)
-```
-```{r , fig.align="center", fig.cap="Mediation path.", fig.height = 2, fig.width = 7}
-par(mar=c(0,0,0,0)); psych::mediate.diagram(medi, show.c = F, main= "", ylim=c(4.5,7.3))
-text(3, 6.5, "A ***",  cex = .8); text(7, 6.5, "B *",  cex = .8);  text(5.8, 4.9, "***",  cex = .8); text(5, 6.7, "AB *",  cex = .8)
-```
-\
-```{r HED_fmri_plot_HF, echo=FALSE,  message=FALSE, cache=TRUE, fig.align="right", fig.cap="Beta estimates from hippocampal formation during Hedonic reactivity testby session by intervention.", warning=F}
-# AVERAGED EFFECT -------------
-dfH <- summarySEwithin(HED_fMRI,
-                       measurevar = "HF_score",
-                       withinvars = "session",
-                       betweenvars = "intervention",
-                       idvar = "id")
-
-labels <- c("0" = "Placebo", "1" = "Liraglutide")
-
-HED_fMRI$intervention = as.factor(HED_fMRI$intervention)
-
-dfH$cond <- ifelse(dfH$session == "pre", -0.25, 0.25)
-HED_fMRI$cond <- ifelse(HED_fMRI$session == "pre", -0.25, 0.25)
-HED_fMRI <- HED_fMRI %>% mutate(condjit = jitter(as.numeric(cond), 0.3),
-                                  grouping = interaction(id, cond))
-
-
-pp <- ggplot(HED_fMRI, aes(x = cond, y = HF_score,  fill = intervention, color = intervention)) +
-  geom_hline(yintercept = 0, lty=2) +
-  geom_point(data = dfH, alpha = 0.5) +
-  geom_line(aes(x = condjit, group=id), alpha = 0.2) +
-  geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(group = session, fill = intervention, color = NA))+
-  geom_point(aes(x = condjit), alpha = .3) +
-  geom_crossbar(data = dfH, aes(y = HF_score, ymin=HF_score-se, ymax=HF_score+se), width = 0.2 , alpha = 0.1)+
-  ylab('Beta estimates HF (a.u.)') +
-  xlab('') +
-  #scale_y_continuous(expand = c(0, 0), breaks = c(seq.int(0,100, by = 20)), limits = c(-0.5,100.5)) +
-  scale_x_continuous(labels=c("Pre", "Post"),breaks = c(-.25,.25), limits = c(-.5,.5)) +
-  scale_fill_manual(values=c("0"= pal[1], "1"=pal[6]), guide = 'none') +
-  scale_color_manual(values=c("0"=pal[1], "1"=pal[6]), guide = 'none') +
-  theme_bw()+ facet_wrap(~intervention, labeller=labeller(intervention = labels))
-
-
-ppp <- pp + averaged_theme
-pp + html_theme
-```
-```{r}
-cairo_pdf('figures/Figure_HED_fmri_HF.pdf')
-print(ppp)
-dev.off()
-```
-
-```{r HED_fmri_plot_OFC, echo=FALSE,  message=FALSE, cache=TRUE, fig.align="right", fig.cap="Beta estimates from OFC during Hedonic reactivity test by session by intervention."}
-# AVERAGED EFFECT -------------
-dfH <- summarySEwithin(HED_fMRI,
-                       measurevar = "OFC_score",
-                       withinvars = "session",
-                       betweenvars = "intervention",
-                       idvar = "id")
-
-labels <- c("0" = "Placebo", "1" = "Liraglutide")
-
-HED_fMRI$intervention = as.factor(HED_fMRI$intervention)
-
-dfH$cond <- ifelse(dfH$session == "pre", -0.25, 0.25)
-HED_fMRI$cond <- ifelse(HED_fMRI$session == "pre", -0.25, 0.25)
-HED_fMRI <- HED_fMRI %>% mutate(condjit = jitter(as.numeric(cond), 0.3),
-                                  grouping = interaction(id, cond))
-
-
-pp <- ggplot(HED_fMRI, aes(x = cond, y = OFC_score,  fill = intervention, color = intervention)) +
-  geom_hline(yintercept = 0, lty=2) +
-  geom_point(data = dfH, alpha = 0.5) +
-  geom_line(aes(x = condjit, group=id), alpha = 0.2) +
-  geom_flat_violin(scale = "count", trim = FALSE, alpha = .2, aes(group = session, fill = intervention, color = NA))+
-  geom_point(aes(x = condjit), alpha = .3) +
-  geom_crossbar(data = dfH, aes(y = OFC_score, ymin=OFC_score-se, ymax=OFC_score+se), width = 0.2 , alpha = 0.1)+
-  ylab('Beta estimates OFC (a.u.)') +
-  xlab('') +
-  #scale_y_continuous(expand = c(0, 0), breaks = c(seq.int(0,100, by = 20)), limits = c(-0.5,100.5)) +
-  scale_x_continuous(labels=c("Pre", "Post"),breaks = c(-.25,.25), limits = c(-.5,.5)) +
-  scale_fill_manual(values=c("0"= pal[1], "1"=pal[6]), guide = 'none') +
-  scale_color_manual(values=c("0"=pal[1], "1"=pal[6]), guide = 'none') +
-  theme_bw()+ facet_wrap(~intervention, labeller=labeller(intervention = labels))
-
-
-ppp <- pp + averaged_theme
-pp + html_theme
-```
-```{r}
-cairo_pdf('figures/Figure_HED_fmri_OFC.pdf')
-print(ppp)
-dev.off()
-```

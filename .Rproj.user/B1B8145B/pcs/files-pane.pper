@@ -1,8 +1,8 @@
 {
-    "path" : "~/Desktop/SwitchDrive/T0",
+    "path" : "~/Desktop/SwitchDrive/LIRA",
     "sortOrder" : [
         {
-            "ascending" : true,
+            "ascending" : false,
             "columnIndex" : 2
         }
     ]
