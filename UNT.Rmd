@@ -1,0 +1,194 @@
+---
+title: "OBIWAN PLACEBO VS. TREATMENT ANALYSIS REPORT"
+author: "David Munoz Tord"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:  
+    includes:
+      in_header: header.html
+    css: "style.css"
+    code_folding: "hide"
+    toc: true
+    toc_float: false
+    number_sections: false
+  pdf_document:
+    extra_dependencies: ["float"]
+repro:
+  data:
+    HED: data/HEDONIC.csv
+    INST: data/INST.csv
+    PAV: data/PAV.csv
+    PIT: data/PIT.csv
+    intern: data/internal.csv
+    medic: data/medic.csv
+    HED_fMRI: data/HED_fmri.csv
+    
+  packages: [ aaronpeikert/repro@devel, crsh/papaja@devel, tinylabels, apaTables, MBESS, afex, ggplot2, ggpubr, Rmisc, emmeans, tidyr, BayesFactor, bayestestR, devtools, lspline, kableExtra, sjPlot, knitr, XML, rlist, janitor, optimx, ggthemes, dplyr, JWileymisc, corrplot, caret, intmed, stringr, cowplot, pander, psych, cmdstanr, brms, tidybayes, tibble]
+  scripts: R/clean.R
+  apt:
+    - libgsl0-dev
+---
+
+### Setup {-}
+<!-- # TO DO -->
+  
+```{r setup, results='hide', message=FALSE, warning=FALSE}
+
+library(repro)
+# load packages from yaml header
+automate_load_packages()
+# include external scripts
+automate_load_scripts()
+
+# load data
+intern  <- automate_load_data(intern, read.csv, stringsAsFactors = T)
+medic    <- automate_load_data(medic, read.csv, stringsAsFactors = T)
+PAV      <- automate_load_data(PAV, read.csv, stringsAsFactors = T)
+INST     <- automate_load_data(INST, read.csv, stringsAsFactors = T)
+PIT      <- automate_load_data(PIT, read.csv, stringsAsFactors = T)
+HED      <- automate_load_data(HED, read.csv, stringsAsFactors = T)
+HED_fMRI <- automate_load_data(HED_fMRI, read.csv, stringsAsFactors = T)
+
+sessio = session_info();  opts_chunk$set(warning = FALSE, message = FALSE) # set F for all
+
+
+## we recommend running this is a fresh R session or restarting your current session
+#install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
+#install_cmdstan()
+
+
+# check_git(); check_make(); check_docker() #check if installed
+
+
+#May I suggest running `repro::automate()`? 
+
+#This will create a `Dockerfile` & `Makefile` based on every RMarkdown in this folder and the special yamls in them. date: "`r format(Sys.time(), '%d %B, %Y')`" 
+
+#add ENV DEBIAN_FRONTEND=noninteractive to DOCKERFILE
+  
+```
+
+This file was automatically created via `the Repro package (version 0.1.0)` using  `r sessio$platform[1]`
+
+
+
+```{r options, results='hide', message=FALSE, warning=FALSE}
+niter = 500; warm = 100; chains = 4; cores = 4; nsim = 10000 # number of iterations (to change if you want to quick check and warmups (BUT chains and BF might be really unstable if you have less than 20'000 iter (4x5000) ) #or also parallel::detectCores()/2)
+options(scipen = 666, warn=-1, contrasts=c("contr.sum","contr.poly"), mc.cores = cores)  #remove scientific notation # remove warnings #set contrasts to sum ! #remove scientific notation # remove warnings #set contrasts to sum !
+ #cl = parallel::detectCores()/2
+set.seed(666) #set random seed
+control = lmerControl(optimizer ='optimx', optCtrl=list(method='nlminb')) #set "better" lmer optimizer #nolimit # yoloptimizer
+#emm_options(pbkrtest.limit = 8000) #increase repetitions limit for frequentist stats
+
+source('R/plots.R', echo=F)# plot specification
+source('R/utils.R', echo=F)# useful functions
+
+panderOptions('knitr.auto.asis', FALSE) #remove auto styling
+
+labels <- c("-1" = "Pre", "1" = "Post")#for plots
+
+# Look at R/clean.R (listed in the YAML) which does all the preprocessing for more info
+
+```
+
+```{r clean, include=FALSE}
+# this chunk runs R/clean.R (listed in the YAML) which does all the preprocessing
+```
+### Description
+Stan uses Hamiltonian Monte Carlo (HMC) to explore the target distribution — the posterior defined by a Stan program + data — by simulating the evolution of a Hamiltonian system.
+
+<!-- Parametric Bootstrap Test method to evaluate significance of fixed effects in mixed-effects models (using MLE fit, nsim = 5000) and Bayes Factor from mixed models (see Wagenmakers, 2007) -->
+
+### Demographics
+```{r demographics}
+egltable(c("BMI", "AGE", "GENDER"), 
+  g = "INTERVENTION", data = df, strict = FALSE) %>%
+  kbl(caption ="Summary statistics", digits = 2) %>%
+  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%
+  row_spec(0,bold=T,align='c')
+```
+
+### Biomedical data
+
+#### Variable Selection  {-}
+```{r var_plot, warning=FALSE, cache=TRUE, fig.align="center", out.width="90%", fig.cap="Box-plot of all biomedical predictors per intervention."}
+
+# Boxplot of biomedical variables per group
+ggplot(med)+
+  geom_boxplot(aes(INTERVENTION, n))+
+  facet_wrap(~feature, scales = "free")+
+  labs(title = "")+
+   theme_minimal()+
+  theme(axis.title = element_text()) + 
+  ylab("Biomedical predictor's value (scaled)") + 
+  xlab('')
+
+# Plot correlogram of numeric variables
+#pairs(~., data = df[,8:19], main = "Scatterplot Matrix of variables")
+#corrplot(cor(df[,8:19], use="pairwise.complete.obs"), type="lower")
+
+```
+\
+
+Recursive Feature Eliminations 
+```{r var_sel, cached=T,fig.align="center"}
+
+#1) with Recursive Feature Eliminations (CARET)
+
+sizes = 1:length(dfmed[c(-1)]); len = length(sizes)
+seeds <- vector(mode = "list", length = len)
+for(i in 1:(len-1)) seeds[[i]]<- sample.int(n=nsim, size = length(sizes)+1)
+# for the last model
+seeds[[len]]<-sample.int(nsim, 1)
+
+RFEcontrol <- rfeControl(functions=rfFuncs, method="cv", number=10, seeds= seeds) # control options
+
+rfeResults = rfe(x = dfmed[c(-1)], y = dfmed$intervention, sizes=sizes, rfeControl=RFEcontrol)
+predictors(rfeResults)
+plot(rfeResults, type=c("g", "o")) # look for the "elbow"
+
+#if we agree that BMI, Body Weight and Waist Circumference actually measure the same thing, there only 4 other variables that are "useful" to separate the two groups :
+#Reelin and GLP
+
+```
+
+#### Mediation analysis  {-}
+```{r mediate}
+
+#parallel:::setDefaultClusterOptions(setup_strategy = "sequential")
+
+med_res <- intmed::mediate(y = "weightLoss", med = c("GLP_diff" ,  "reelin_diff"),  treat = "intervention", ymodel = "regression", mmodel = c("regression", "regression"), treat_lv = 1, control_lv = 0, incint = TRUE, inc_mmint = FALSE, conf.level = 0.95, data = df , sim = nsim, complete_analysis = TRUE, digits = 3,  summary_report=F) #c = c("age","gender"),
+
+table <- list.clean(readHTMLTable("res.html"), fun = is.null, recursive = FALSE); table = table[3]$`NULL`[1:6,]
+
+```
+
+```{r mediate_res}
+
+#pander(table)
+colnames(table)[4] = "p"; table$p = as.numeric(table$p); table$p = ifelse(as.numeric(table$p) < 0.05,paste("<span style=\" font-weight: bold; \" >" ,sprintf("%.3f",table$p), "</span>"),  paste("<span>" ,sprintf("%.3f",table$p), "</span>")) # highlight p < 0.05
+table$p = ifelse(table$p == '<span style=" font-weight: bold; " > 0.000 </span>', "<span style=\" font-weight: bold;    \" >\u003C 0.001</span>", table$p)
+
+
+table[-c(3:4),] %>%
+  kbl(caption ="Mediation Analysis: DV = Weight loss, IV = Intervention", escape=F) %>%
+  kable_styling(latex_options = "HOLD_position", position = "center", full_width = F)
+
+#just for plot purpose (because not the same exact analysis)
+medi =  psych::mediate(weightLoss ~ intervention + (GLP_diff) + (reelin_diff), data = df, n.iter = nsim, plot=F); psych::mediate.diagram(medi, show.c=FALSE)
+```
+
+### Weight Loss
+```{r weigth_loss, results = "hide"}
+
+# Model
+mf = formula(weightLoss ~ intervention + gender + age + GLP_diff + reelin_diff  + (1|id))
+
+# -------------------------------------- Bayesian Regression Models using Stan -------------------------------------
+# STAN is a probabilistic programming language that allows you to get full Bayesian statistical inference with MCMC sampling.
+bmod_full = brm(mf, data=df, family = gaussian, prior = c(prior(normal(0, 3), class = "b", coef = ""), prior(normal(0, 100), class = "Intercept", coef = "")), sample_prior = T, save_pars = save_pars(all = TRUE), chains = chains,  iter = niter, warmup = warm, seed = 123, inits = 1, backend = 'cmdstanr', threads = threading(4), control = list(adapt_delta = 0.99)) # a lot to unwind here..  1) Generic informative prior around 0 for fixed effects and weak prior for the intercept 2) we need to sample priors and save parameters for computing BF 3)larger step size  
+
+
+#lmer to compare
+fmod_full = lm(update(mf, ~.- (1|id)) , data = df)
+```

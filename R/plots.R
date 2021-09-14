@@ -34,6 +34,7 @@ html_theme <- theme_bw(base_size = 24, base_family = "Helvetica")+
         panel.border = element_blank())
 
 
+
 pal = viridis::inferno(n=5) # specialy conceived for colorblindness
 pal[6] = "#21908CFF" # add one
 
