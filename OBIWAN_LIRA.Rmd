@@ -73,7 +73,7 @@ This file was automatically created via `the Repro package (version 0.1.0)` usin
 
 
 ```{r options, results='hide', message=FALSE, warning=FALSE}
-niter = 500; warm = 100; chains = 4; cores = 4; nsim = 10000 # number of iterations (to change if you want to quick check and warmups (BUT chains and BF might be really unstable if you have less than 20'000 iter (4x5000) ) #or also parallel::detectCores()/2)
+niter = 5000; warm = 1000; chains = 4; cores = 4; nsim = 10000 # number of iterations (to change if you want to quick check and warmups (BUT chains and BF might be really unstable if you have less than 20'000 iter (4x5000) ) #or also parallel::detectCores()/2)
 options(scipen = 666, warn=-1, contrasts=c("contr.sum","contr.poly"), mc.cores = cores)  #remove scientific notation # remove warnings #set contrasts to sum ! #remove scientific notation # remove warnings #set contrasts to sum !
  #cl = parallel::detectCores()/2
 set.seed(666) #set random seed
@@ -222,7 +222,7 @@ annotate_figure(diagWEIGHT, top = text_grob("Diagnostic Plots", face = "bold", s
 
 
 
-```{r WEIGHT_tab}
+```{r WEIGHT_tab, results='hide'}
 
 full_tab = describe_posterior(bmod_full,
                    estimate = "median", dispersion = T,
@@ -411,7 +411,7 @@ diagRT <- ggarrange(param, var_group, rep_fit, error, ncol = 2, nrow = 2)
 annotate_figure(diagRT, top = text_grob("Diagnostic Plots", face = "bold", size = 10))
 ```
 
-```{r PAV_tab, cache=F}
+```{r PAV_tab, cache=F, results='hide'}
 
 full_tab = describe_posterior(bmod_full,
                    estimate = "median", dispersion = T,
@@ -615,7 +615,7 @@ annotate_figure(diagLik, top = text_grob("Diagnostic Plots", face = "bold", size
 ```
 
 
-```{r PAV_tab_lik,  cache=F}
+```{r PAV_tab_lik,  cache=F, results='hide'}
 
 full_tab = describe_posterior(bmod_full,
                    estimate = "median", dispersion = T,
@@ -828,7 +828,7 @@ diagINST <- ggarrange(param, var_group, rep_fit, error, ncol = 2, nrow = 2)
 annotate_figure(diagINST, top = text_grob("Diagnostic Plots", face = "bold", size = 10))
 ```
 
-```{r INST_tab, cache=F}
+```{r INST_tab, cache=F, results='hide'}
 
 full_tab = describe_posterior(bmod_full,
                    estimate = "median", dispersion = T,
@@ -934,7 +934,7 @@ Mobilized effort = Area under the curve of the force exerted exceeding the deliv
 mf = formula(AUC ~ condition*intervention*session + age + gender + BMI_V1  + hungry + GLP_diff + reelin_diff + (condition*session|id) + (1|trialxcondition))
 
 # -------------------------------------- Bayesian Regression Models using Stan -------------------------------------
-bmod_full = brm(bf(mf, hu ~ 1), family = hurdle_gaussian, stanvars = stanvars, data=PIT.clean, prior =  c(prior(normal(0, 3), class = "b", coef = ""), prior(normal(0, 100), class = "Intercept", coef = ""), prior(logistic(0, 0.5), class = "Intercept", dpar = "hu")), sample_prior = T, save_pars = save_pars(all = TRUE), chains = chains,  iter = niter, warmup = warm, seed = 123, inits = 1, backend = 'cmdstan', threads = threading(4)) # a lot to unwind here.. 1) custom gaussian hurdle cause zero-inflated continous data more details here: https://cran.r-project.org/web/packages/brms/vignettes/brms_customfamilies.html 2) Generic weakly informative prior around 0 for fixed effects and very weak prior for the intercept 3) we need to sample priors and save parameters for computing BF 
+bmod_full = brm(bf(mf, hu ~ 1), family = hurdle_gaussian, stanvars = stanvars, data=PIT.clean, prior =  c(prior(normal(0, 3), class = "b", coef = ""), prior(normal(0, 100), class = "Intercept", coef = ""), prior(logistic(0, 0.5), class = "Intercept", dpar = "hu")), sample_prior = T, save_pars = save_pars(all = TRUE), chains = chains,  iter = niter, warmup = warm, seed = 123, inits = 1, backend = 'cmdstan', threads = threading(4), control = list(adapt_delta = 0.99)) # a lot to unwind here.. 1) custom gaussian hurdle cause zero-inflated continous data more details here: https://cran.r-project.org/web/packages/brms/vignettes/brms_customfamilies.html 2) Generic weakly informative prior around 0 for fixed effects and very weak prior for the intercept 3) we need to sample priors and save parameters for computing BF 4)increased step size
 
 #lmer to compare
 fmod_full = lmer(mf , data = PIT.clean, REML=F, control = control)
@@ -972,7 +972,7 @@ annotate_figure(diagPIT, top = text_grob("Diagnostic Plots", face = "bold", size
 ```
 
 
-```{r PIT_res,  cache=F}
+```{r PIT_res,  cache=F, results='hide'}
 
 full_tab = describe_posterior(bmod_full,
                    estimate = "median", dispersion = T,
@@ -1171,7 +1171,7 @@ Perceived liking = how pleasant is the liquid solution rated (0-100, with repeti
 mf = formula(perceived_liking ~ condition*intervention*session + age + gender + BMI_V1  + hungry + GLP_diff + reelin_diff + int + fam + (condition*session|id) + (1|trialxcondition))
 
 # -------------------------------------- Bayesian Regression Models using Stan -------------------------------------
-bmod_full = brm(bf(mf, hu ~ 1), family = hurdle_gaussian, stanvars = stanvars, data=HED, prior =  c(prior(normal(0, 3), class = "b", coef = ""), prior(normal(0, 100), class = "Intercept", coef = ""), prior(logistic(0, 0.5), class = "Intercept", dpar = "hu")), sample_prior = T, save_pars = save_pars(all = TRUE), chains = chains,  iter = niter, warmup = warm, seed = 123, inits = 1, backend = 'cmdstan', threads = threading(4))# a lot to unwind here.. 1)  custom gaussian hurdle cause zero-inflated continous data 2) Generic weakly informative prior around 0 for fixed effects and very weak prior for the intercept 3) we need to sample priors and save parameters for computing BF #this one is a big longer, so seat tight
+bmod_full = brm(bf(mf, hu ~ 1), family = hurdle_gaussian, stanvars = stanvars, data=HED, prior =  c(prior(normal(0, 3), class = "b", coef = ""), prior(normal(0, 100), class = "Intercept", coef = ""), prior(logistic(0, 0.5), class = "Intercept", dpar = "hu")), sample_prior = T, save_pars = save_pars(all = TRUE), chains = chains,  iter = niter, warmup = warm, seed = 123, inits = 1, backend = 'cmdstan', threads = threading(4), control = list(adapt_delta = 0.99))# a lot to unwind here.. 1)  custom gaussian hurdle cause zero-inflated continous data 2) Generic weakly informative prior around 0 for fixed effects and very weak prior for the intercept 3) we need to sample priors and save parameters for computing BF #this one is a big longer, so seat tight 4) increased step size
 
 #lmer to compare
 fmod_full = lmer(mf , data = HED, REML=F, control = control)
@@ -1210,7 +1210,7 @@ annotate_figure(diagPIT, top = text_grob("Diagnostic Plots", face = "bold", size
 
 
 
-```{r HED_res, cache=F}
+```{r HED_res, cache=F, results='hide'}
 
 full_tab = describe_posterior(bmod_full,
                    estimate = "median", dispersion = T,
@@ -1624,6 +1624,7 @@ check out "analysis_LIRA_fMRI.R" for more details
 
 
 #### Packages {-}
+Thanks to all the package's authors and developers!
 ```{r, warning=F}
 report::report_packages()
 
