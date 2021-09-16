@@ -1,0 +1,20 @@
+"0","dev.off"
+"1","function (which = dev.cur()) 
+"
+"1","{
+"
+"1","    if (which == 1) 
+"
+"1","        stop(""cannot shut down device 1 (the null device)"")
+"
+"1","    .External(C_devoff, as.integer(which))
+"
+"1","    dev.cur()
+"
+"1","}
+"
+"1","<bytecode: 0x558a6c8e0838>
+"
+"1","<environment: namespace:grDevices>
+"
+"0","cairo_pdf('figures/Figure_PavlovianRT_Lira_Bayes.pdf')"

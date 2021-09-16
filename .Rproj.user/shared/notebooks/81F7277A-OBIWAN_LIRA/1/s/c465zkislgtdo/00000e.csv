@@ -1,0 +1,5 @@
+"0",""
+"0","# Plot correlogram of numeric variables"
+"0","#pairs(~., data = df[,8:19], main = ""Scatterplot Matrix of variables"")"
+"0","#corrplot(cor(df[,8:19], use=""pairwise.complete.obs""), type=""lower"")"
+"0",""

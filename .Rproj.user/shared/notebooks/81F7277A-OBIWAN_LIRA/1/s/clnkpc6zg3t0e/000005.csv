@@ -1,0 +1,3 @@
+"0",""
+"0","table <- list.clean(readHTMLTable(""res.html""), fun = is.null, recursive = FALSE); table = table[3]$`NULL`[1:6,]"
+"0",""
