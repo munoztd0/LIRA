@@ -1,3 +1,0 @@
-"0",""
-"0","#just for plot purpose (because not the same exact analysis)"
-"0","medi =  psych::mediate(weightLoss ~ intervention + (GLP_diff) + (reelin_diff), data = df, n.iter = nsim, plot=F); psych::mediate.diagram(medi, show.c=FALSE)"

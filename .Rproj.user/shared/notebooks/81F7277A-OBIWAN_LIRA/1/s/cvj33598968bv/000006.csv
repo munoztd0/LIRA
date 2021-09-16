@@ -1,5 +1,0 @@
-"0","egltable(c(""BMI"", ""AGE"", ""GENDER""), "
-"0","  g = ""INTERVENTION"", data = df, strict = FALSE) %>%"
-"0","  kbl(caption =""Summary statistics"", digits = 2) %>%"
-"0","  kable_styling(latex_options = ""HOLD_position"", position = ""center"", full_width = F) %>%"
-"0","  row_spec(0,bold=T,align='c')"
