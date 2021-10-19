@@ -49,7 +49,7 @@ PIT      <- automate_load_data(PIT, read.csv, stringsAsFactors = T)
 HED      <- automate_load_data(HED, read.csv, stringsAsFactors = T)
 HED_fMRI <- automate_load_data(HED_fMRI, read.csv, stringsAsFactors = T)
 
-x = session_info();  opts_chunk$set(warning = FALSE, message = FALSE) # set F for all
+
 
 
 ## we recommend running this is a fresh R session or restarting your current session
@@ -58,6 +58,9 @@ x = session_info();  opts_chunk$set(warning = FALSE, message = FALSE) # set F fo
 
 
 # check_git(); check_make(); check_docker() #check if installed
+
+
+sessio = session_info(); #opts_chunk$set(echo = F, message=F, warning=F) # set echo F for all
 
 
 #May I suggest running `repro::automate()`? 
@@ -69,6 +72,7 @@ x = session_info();  opts_chunk$set(warning = FALSE, message = FALSE) # set F fo
 ```
 
 This file was automatically created via `the Repro package (version 0.1.0)` using  `r sessio$platform[1]`
+
 
 
 
@@ -89,13 +93,24 @@ labels <- c("-1" = "Pre", "1" = "Post")#for plots
 
 # Look at R/clean.R (listed in the YAML) which does all the preprocessing for more info
 
+
+# If you are unsure weather or not you have `git` `make` & `docker`.
+# check_git()
+# check_make()
+# check_docker()
 ```
+
+
+### Description
+TODO blabla\
+
 
 ```{r clean, include=FALSE}
 # this chunk runs R/clean.R (listed in the YAML) which does all the preprocessing
 ```
 ### Description
-TODO blabla\
+Stan uses Hamiltonian Monte Carlo (HMC) to explore the target distribution — the posterior defined by a Stan program + data — by simulating the evolution of a Hamiltonian system.
+
 
 <!-- Parametric Bootstrap Test method to evaluate significance of fixed effects in mixed-effects models (using MLE fit, nsim = 5000) and Bayes Factor from mixed models (see Wagenmakers, 2007) -->
 
@@ -111,6 +126,8 @@ egltable(c("BMI", "AGE", "GENDER"),
 ### Biomedical data
 
 #### Variable Selection  {-}
+
+
 ```{r var_plot, warning=FALSE, cache=TRUE, fig.align="center", out.width="90%", fig.cap="Box-plot of all biomedical predictors per intervention."}
 
 # Boxplot of biomedical variables per group
@@ -131,7 +148,9 @@ ggplot(med)+
 \
 
 Recursive Feature Eliminations 
+
 ```{r var_sel, cached=T,fig.align="center"}
+
 
 #1) with Recursive Feature Eliminations (CARET)
 
@@ -153,7 +172,10 @@ plot(rfeResults, type=c("g", "o")) # look for the "elbow"
 ```
 
 #### Mediation analysis  {-}
+
+
 ```{r mediate}
+
 
 #parallel:::setDefaultClusterOptions(setup_strategy = "sequential")
 
@@ -163,7 +185,9 @@ table <- list.clean(readHTMLTable("res.html"), fun = is.null, recursive = FALSE)
 
 ```
 
+
 ```{r mediate_res}
+
 
 #pander(table)
 colnames(table)[4] = "p"; table$p = as.numeric(table$p); table$p = ifelse(as.numeric(table$p) < 0.05,paste("<span style=\" font-weight: bold; \" >" ,sprintf("%.3f",table$p), "</span>"),  paste("<span>" ,sprintf("%.3f",table$p), "</span>")) # highlight p < 0.05
@@ -179,14 +203,19 @@ medi =  psych::mediate(weightLoss ~ intervention + (GLP_diff) + (reelin_diff), d
 ```
 
 ### Weight Loss
-```{r weigth_loss}
+
+```{r weigth_loss, results = "hide"}
 
 # Model
 mf = formula(weightLoss ~ intervention + gender + age + GLP_diff + reelin_diff  + (1|id))
 
 # -------------------------------------- Bayesian Regression Models using Stan -------------------------------------
 # STAN is a probabilistic programming language that allows you to get full Bayesian statistical inference with MCMC sampling.
-bmod_full = brm(mf, data=df, family = gaussian, prior = c(prior(normal(0, 3), class = "b", coef = ""), prior(normal(0, 100), class = "Intercept", coef = "")), sample_prior = T, save_pars = save_pars(all = TRUE), chains = chains,  iter = niter, warmup = warm, seed = 123, inits = 1, backend = 'cmdstanr', threads = threading(4)) # a lot to unwind here..  1) Generic informative prior around 0 for fixed effects and weak prior for the intercept 2) we need to sample priors and save parameters for computing BF  
+
+
+bmod_full = brm(mf, data=df, family = gaussian, prior = c(prior(normal(0, 3), class = "b", coef = ""), prior(normal(0, 100), class = "Intercept", coef = "")), sample_prior = T, save_pars = save_pars(all = TRUE), chains = chains,  iter = niter, warmup = warm, seed = 123, inits = 1, backend = 'cmdstanr', threads = threading(4), control = list(adapt_delta = 0.99)) # a lot to unwind here..  1) Generic informative prior around 0 for fixed effects and weak prior for the intercept 2) we need to sample priors and save parameters for computing BF 3)larger step size  
+
+
 
 
 #problem here!!
@@ -224,7 +253,9 @@ annotate_figure(diagWEIGHT, top = text_grob("Diagnostic Plots", face = "bold", s
 
 
 
-```{r WEIGHT_tab}
+
+
+```{r WEIGHT_tab, results='hide'}
 
 full_tab = describe_posterior(bmod_full,
                    estimate = "median", dispersion = T,
@@ -290,6 +321,8 @@ pander:: pander(tmp[2,])
 ```
 
 #### Plot Weight Loss {-}
+
+
 ```{r Weight_Loss, warning=FALSE, cache=TRUE, fig.align="center", fig.cap="Weight Loss by intervention."}
 
 
@@ -355,7 +388,10 @@ pp + html_theme
 ```
 \
 \
-```{r weight_saveFIG}
+
+
+```{r weight_saveFIG, results = "hide"}
+
 cairo_pdf('figures/Figure_WL_Lira.pdf')
 print(plt)
 dev.off()
@@ -369,7 +405,9 @@ dev.off()
 
 #### Latency {-}
 Latency = time to detect the target (ms) & condition = CS+ or CS-
-```{r PAV_RT, cache=F}
+
+
+```{r PAV_RT, cache=F, results = "hide"}
 
 # Model
 mf = formula(RT ~ condition*intervention*session + age + gender + BMI_V1  + hungry + GLP_diff + reelin_diff + (condition*session|id) + (1|trialxcondition))
@@ -413,7 +451,9 @@ diagRT <- ggarrange(param, var_group, rep_fit, error, ncol = 2, nrow = 2)
 annotate_figure(diagRT, top = text_grob("Diagnostic Plots", face = "bold", size = 10))
 ```
 
-```{r PAV_tab, cache=F}
+
+
+```{r PAV_tab, cache=F, results='hide'}
 
 full_tab = describe_posterior(bmod_full,
                    estimate = "median", dispersion = T,
@@ -563,7 +603,10 @@ pp <- ggplot(PAV.means, aes(x = cond, y = RT,
 plt = pp + averaged_theme  + theme(legend.position=c(.96,.94), axis.text.x = element_text(size = 14))
 pp + html_theme  + theme(legend.position=c(.96,.94), axis.text.x = element_text(size = 14))
 ```
-```{r PAV_RT_saveFIG}
+
+
+```{r PAV_RT_saveFIG, results = "hide"}
+
 cairo_pdf('figures/Figure_PavlovianRT_Lira.pdf')
 print(plt)
 dev.off
@@ -576,12 +619,18 @@ dev.off()
 #### Perceived liking (Pavlovian Cue) {-}
 
 Ratings = how pleasant is the clue (0-100, no repetitions)   &   condition = CS+ or CS-
-```{r PAV_Lik, message=FALSE, cache=F}
+
+
+```{r PAV_Lik, message=FALSE, cache=F, results = "hide"}
+
 # Model
 mf = formula(liking ~ condition*intervention*session + age + gender + BMI_V1  + hungry + GLP_diff + reelin_diff + (condition*session|id))
 
 # -------------------------------------- Bayesian Regression Models using Stan -------------------------------------
-bmod_full = brm(mf, data=PAV.means, family = gaussian, prior = c(prior(normal(0, 3), class = "b", coef = ""), prior(normal(0, 100), class = "Intercept", coef = "")), sample_prior = T, save_pars = save_pars(all = TRUE), chains = chains,  iter = niter, warmup = warm, seed = 123, inits = 1, backend = 'cmdstanr', threads = threading(4))  # a lot to unwind here..  1) Generic weakly informative prior around 0 for fixed effects and very weak prior for the intercept 2) we need to sample priors and save parameters for computing BF  
+
+
+bmod_full = brm(mf, data=PAV.means, family = gaussian, prior = c(prior(normal(0, 3), class = "b", coef = ""), prior(normal(0, 100), class = "Intercept", coef = "")), sample_prior = T, save_pars = save_pars(all = TRUE), chains = chains,  iter = niter, warmup = warm, seed = 123, inits = 1, backend = 'cmdstanr', threads = threading(4), control = list(adapt_delta = 0.99))  # a lot to unwind here..  1) Generic weakly informative prior around 0 for fixed effects and very weak prior for the intercept 2) we need to sample priors and save parameters for computing BF  3)larger step size  
+
 
 
 #lmer to compare
@@ -617,7 +666,9 @@ annotate_figure(diagLik, top = text_grob("Diagnostic Plots", face = "bold", size
 ```
 
 
-```{r PAV_tab_lik,  cache=F}
+
+
+```{r PAV_tab_lik,  cache=F, results='hide'}
 
 full_tab = describe_posterior(bmod_full,
                    estimate = "median", dispersion = T,
@@ -758,7 +809,10 @@ pp + html_theme  + theme(legend.position=c(.96,.94), axis.text.x = element_text(
 ```
 \
 \
-```{r PAV_lik_saveFIG}
+
+
+```{r PAV_lik_saveFIG, results = "hide"}
+
 cairo_pdf('figures/Figure_PavlovianLiking_Lira.pdf')
 print(plt)
 dev.off()
@@ -772,7 +826,9 @@ dev.off()
 grips = number of times participant exceeded the force threshold to acquire the reward (Milkshake)
 \
 
-```{r INST, cache=F}
+
+
+```{r INST, cache=F, results = "hide"}
 
 # Model
 mf1 = formula(grips ~ trial*intervention*session + age + gender + BMI_V1  + hungry + GLP_diff + reelin_diff + (session|id) + (1|trial)) # LINEAR FIT  
@@ -830,7 +886,9 @@ diagINST <- ggarrange(param, var_group, rep_fit, error, ncol = 2, nrow = 2)
 annotate_figure(diagINST, top = text_grob("Diagnostic Plots", face = "bold", size = 10))
 ```
 
-```{r INST_tab, cache=F}
+
+
+```{r INST_tab, cache=F, results='hide'}
 
 full_tab = describe_posterior(bmod_full,
                    estimate = "median", dispersion = T,
@@ -884,7 +942,10 @@ pander::pander(tmp)
 
 
 #### Plot {-}
+
+
 ```{r INST_plot, results='hide', warning=FALSE, message=FALSE, cache=F, fig.cap="Number of grips over trials by session."}
+
 
 int_conditions <- list(
   session = setNames(c(-1, 1), c("pre", "post"))
@@ -915,6 +976,8 @@ pp <-  ggplot(dfTRIAL, aes(x =trial, y = grips)) +
   theme_bw() +
   facet_wrap(~session, labeller=labeller(session = labels))
 
+
+
 pp + html_theme + theme(legend.position=c(.9,.88),axis.text.x = element_text(size = 14))
 
 plt = pp + averaged_theme + theme(legend.position=c(.9,.88),axis.text.x = element_text(size = 14))
@@ -922,7 +985,10 @@ plt = pp + averaged_theme + theme(legend.position=c(.9,.88),axis.text.x = elemen
 ```
 \
 \
-```{r INST_saveFIG, warning=FALSE}
+
+
+```{r INST_saveFIG, results = "hide"}
+
 cairo_pdf('figures/Figure_INST_trial_LIRA.pdf')
 print(plt)
 dev.off()
@@ -931,12 +997,16 @@ dev.off()
 
 ### Pavlvovian-Instrumental Transfer (PIT) Task 
 Mobilized effort = Area under the curve of the force exerted exceeding the delivery threshold during Pavlovian cue presentation
+
+
 ```{r PIT, results='hide', message=FALSE, warning=FALSE}
 
 mf = formula(AUC ~ condition*intervention*session + age + gender + BMI_V1  + hungry + GLP_diff + reelin_diff + (condition*session|id) + (1|trialxcondition))
 
 # -------------------------------------- Bayesian Regression Models using Stan -------------------------------------
-bmod_full = brm(bf(mf, hu ~ 1), family = hurdle_gaussian, stanvars = stanvars, data=PIT.clean, prior =  c(prior(normal(0, 3), class = "b", coef = ""), prior(normal(0, 100), class = "Intercept", coef = ""), prior(logistic(0, 0.5), class = "Intercept", dpar = "hu")), sample_prior = T, save_pars = save_pars(all = TRUE), chains = chains,  iter = niter, warmup = warm, seed = 123, inits = 1, backend = 'cmdstan', threads = threading(4)) # a lot to unwind here.. 1) custom gaussian hurdle cause zero-inflated continous data more details here: https://cran.r-project.org/web/packages/brms/vignettes/brms_customfamilies.html 2) Generic weakly informative prior around 0 for fixed effects and very weak prior for the intercept 3) we need to sample priors and save parameters for computing BF 
+
+
+bmod_full = brm(bf(mf, hu ~ 1), family = hurdle_gaussian, stanvars = stanvars, data=PIT.clean, prior =  c(prior(normal(0, 3), class = "b", coef = ""), prior(normal(0, 100), class = "Intercept", coef = ""), prior(logistic(0, 0.5), class = "Intercept", dpar = "hu")), sample_prior = T, save_pars = save_pars(all = TRUE), chains = chains,  iter = niter, warmup = warm, seed = 123, inits = 1, backend = 'cmdstan', threads = threading(4), control = list(adapt_delta = 0.99)) # a lot to unwind here.. 1) custom gaussian hurdle cause zero-inflated continous data more details here: https://cran.r-project.org/web/packages/brms/vignettes/brms_customfamilies.html 2) Generic weakly informative prior around 0 for fixed effects and very weak prior for the intercept 3) we need to sample priors and save parameters for computing BF 4)increased step size
 
 #lmer to compare
 fmod_full = lmer(mf , data = PIT.clean, REML=F, control = control)
@@ -974,7 +1044,9 @@ annotate_figure(diagPIT, top = text_grob("Diagnostic Plots", face = "bold", size
 ```
 
 
-```{r PIT_res,  cache=F}
+
+
+```{r PIT_res,  cache=F, results='hide'}
 
 full_tab = describe_posterior(bmod_full,
                    estimate = "median", dispersion = T,
@@ -1155,7 +1227,9 @@ plt = pp + averaged_theme + theme(strip.background = element_rect(fill="white"),
 ```
 
 \
-```{r PIT_save, warning=FALSE}
+
+```{r PIT_save, results = "hide"}
+
 cairo_pdf('figures/Figure_PIT_Lira.pdf')
 print(plt)
 dev.off()
@@ -1168,12 +1242,16 @@ dev.off()
 
 # Hedonic Reactivity Test 
 Perceived liking = how pleasant is the liquid solution rated (0-100, with repetitions)   &   condition = Milshake or Tasteless   &   intensity = difference on how intense the liquid solution were rated (mean(Milshake) - mean(Tasteless)) &   familiarity = difference on how familiar the liquid solution were rated (mean(Milshake) - mean(Tasteless))
-```{r HED, cache=F}
+
+
+```{r HED, cache=F, results = "hide"}
 
 mf = formula(perceived_liking ~ condition*intervention*session + age + gender + BMI_V1  + hungry + GLP_diff + reelin_diff + int + fam + (condition*session|id) + (1|trialxcondition))
 
 # -------------------------------------- Bayesian Regression Models using Stan -------------------------------------
-bmod_full = brm(bf(mf, hu ~ 1), family = hurdle_gaussian, stanvars = stanvars, data=HED, prior =  c(prior(normal(0, 3), class = "b", coef = ""), prior(normal(0, 100), class = "Intercept", coef = ""), prior(logistic(0, 0.5), class = "Intercept", dpar = "hu")), sample_prior = T, save_pars = save_pars(all = TRUE), chains = chains,  iter = niter, warmup = warm, seed = 123, inits = 1, backend = 'cmdstan', threads = threading(4))# a lot to unwind here.. 1)  custom gaussian hurdle cause zero-inflated continous data 2) Generic weakly informative prior around 0 for fixed effects and very weak prior for the intercept 3) we need to sample priors and save parameters for computing BF #this one is a big longer, so seat tight
+
+
+bmod_full = brm(bf(mf, hu ~ 1), family = hurdle_gaussian, stanvars = stanvars, data=HED, prior =  c(prior(normal(0, 3), class = "b", coef = ""), prior(normal(0, 100), class = "Intercept", coef = ""), prior(logistic(0, 0.5), class = "Intercept", dpar = "hu")), sample_prior = T, save_pars = save_pars(all = TRUE), chains = chains,  iter = niter, warmup = warm, seed = 123, inits = 1, backend = 'cmdstan', threads = threading(4), control = list(adapt_delta = 0.99))# a lot to unwind here.. 1)  custom gaussian hurdle cause zero-inflated continous data 2) Generic weakly informative prior around 0 for fixed effects and very weak prior for the intercept 3) we need to sample priors and save parameters for computing BF #this one is a big longer, so seat tight 4) increased step size
 
 #lmer to compare
 fmod_full = lmer(mf , data = HED, REML=F, control = control)
@@ -1212,7 +1290,9 @@ annotate_figure(diagPIT, top = text_grob("Diagnostic Plots", face = "bold", size
 
 
 
-```{r HED_res, cache=F}
+
+
+```{r HED_res, cache=F, results='hide'}
 
 full_tab = describe_posterior(bmod_full,
                    estimate = "median", dispersion = T,
@@ -1408,7 +1488,10 @@ plt = pp + averaged_theme + theme(strip.background = element_rect(fill="white"),
 ```
 \
 \
-```{r HED_save,  warning=FALSE}
+
+
+```{r HED_save, results = "hide"}
+
 cairo_pdf('figures/Figure_HED_Lira.pdf')
 print(plt)
 dev.off()
@@ -1424,6 +1507,83 @@ cwd=pwd
 cd /home/OBIWAN/LIRA/fMRI/HED_GLM
 
 ```
+# fMRI group Analysis
+
+
+<!-- # fMRI Analysis -->
+
+<!-- ```{bash} -->
+<!-- cwd=$(pwd) -->
+<!-- cd ~/OBIWAN/DERIVATIVES/GLM/AFNI/hedonicreactivity/LIRA/ # go to fMRI directory -->
+
+
+<!-- #I invite to take a look at the script -->
+<!-- nohup bash -x HED.txt |& tee diary.txt & # runs the AFNI group analysis script in the background and output logs as it goes in the "diary.txt" file -->
+
+cd /home/OBIWAN/DERIVATIVES/GLM/AFNI/hedonicreactivity/LIRA/ # go to fMRI directory
+
+
+#I invite to take a look at the script
+nohup bash -x HED.txt |& tee diary.txt & # runs the AFNI group analysis script in the background and output logs as it goes in the "diary.txt" file
+
+
+#Convert from AFNI format to NIFTI #-prefix test lme+tlrc[i]
+for i in  8 10 12
+  do 3dAFNItoNIFTI -prefix LME_8_con${i}_z LME_8+tlrc[${i}]
+     fslmaths LME_8_con${i}_z -ztop -add -1 -mul -1 LME_8_con${i}_1-p # convert to pvalue then inverse it for display 
+done
+
+cd $cwd
+
+```
+
+check out "analysis_LIRA_fMRI.R" for more details
+```{r HED_fmri,  warning=FALSE}
+
+# mdl.hf = aov_car(data = inter, HF_inter ~ intervention + BMI_diff + age + Error(id), factorize = F, type = "II", anova_table = list(correction = "GG", es = "pes"))
+# 
+# res = nice(mdl.hf, MSE=F); ref_grid(mdl.hf)  #triple check everything is centered at 0
+# 
+# 
+# #calculate Partial eta-squared and its 90 % CI for each effect
+# PES.hf = pes_ci(data = inter, HF_inter ~ intervention + BMI_diff + age + Error(id), conf.level = .90, factorize = FALSE, anova.type = "II", epsilon="none") ;
+# mdl.hf.emms = emmeans(mdl.hf, pairwise ~ intervention)
+
+<!-- ``` -->
+<!-- Contrast Post > Pre in HF -->
+<!-- \ -->
+<!-- ```{r HED_fmri_res, message=F, warning=F} -->
+<!-- res$p.value = as.numeric(res$p.value) -->
+<!-- res$p.value = ifelse(res$p.value < 0.05,paste("<span style=\" font-weight: bold; \" >" ,sprintf("%.3f",res$p.value), "</span>"),  paste("<span>" ,sprintf("%.3f",res$p.value), "</span>")) -->
+
+<!-- res$F = unlist(str_split(gsub("[^0-9.,-]", "", res$F), ","));res$pes = unlist(str_split(gsub("[^0-9.,-]", "", res$pes), ",")); -->
+<!-- res$`90% CI` = paste(sprintf("%.3f",PES.hf[,2]), "-", sprintf("%.3f",PES.hf[,3])) -->
+
+<!-- res$p.value[1]= "<span style=\" font-weight: bold;    \" >\u003C 0.001</span>" -->
+<!-- #res$pes[c(5,7,8)]= c("\u003C 0.001") -->
+<!-- colnames(res)[3:5] = c( paste("F(", res$df[1], ")", sep=""),"&eta;<sub>p</sub><sup>2</sup>", "p") -->
+<!-- res[c(1,4,6,3,5)]  %>% kbl(digits = 2, escape = F,row.names = F)  %>% -->
+<!--   kable_styling(latex_options = "striped", position = "center", full_width = F) -->
+<!-- #print('PES: intervention: Overall higher weight loss for treament (Liraglutide) group') -->
+<!-- #PES.weight[1,] -->
+<!-- ``` -->
+<!-- ```{r message = FALSE, echo=FALSE, results='hide', fig.show="hold", out.width="25%", fig.align="center", fig.cap = 'Model assumptions.', warning=F} -->
+<!-- mod = lm(HF_inter ~ intervention + BMI_diff + age, data = inter) -->
+<!-- x = plot_model(mod, type = "diag") -->
+<!-- x[c(2,3,4,1)] -->
+<!--  #check assumptions -->
+<!-- ``` -->
+<!-- \ -->
+<!-- \ -->
+<!-- ```{r HED_fmri_plot, echo=FALSE,  message=FALSE, cache=TRUE, fig.align="right", fig.cap="Beta estimates from hippocampal formation during Hedonic reactivity test (Post > Pre) by intervention and correlation with weight loss.", warning=F} -->
+
+This part is not run here for different reasons (time it take and need to be on the cluster)
+```{bash, eval=FALSE}
+cwd=$(pwd)
+cd /home/OBIWAN/LIRA/fMRI/HED_GLM
+cd $cwd
+```
+
 # fMRI group Analysis
 
 ```{bash, eval = FALSE}
@@ -1459,8 +1619,8 @@ check out "analysis_LIRA_fMRI.R" for more details
 # mdl.hf.emms = emmeans(mdl.hf, pairwise ~ intervention)
 
 ```
-Contrast Post > Pre in HF
-\
+<!-- Contrast Post > Pre in HF -->
+<!-- \ -->
 ```{r HED_fmri_res, message=F, warning=F}
 # res$p.value = as.numeric(res$p.value)
 # res$p.value = ifelse(res$p.value < 0.05,paste("<span style=\" font-weight: bold; \" >" ,sprintf("%.3f",res$p.value), "</span>"),  paste("<span>" ,sprintf("%.3f",res$p.value), "</span>"))
@@ -1538,6 +1698,8 @@ Contrast Post > Pre in HF
 <!-- text(3, 6.5, "A ***",  cex = .8); text(7, 6.5, "B *",  cex = .8);  text(5.8, 4.9, "***",  cex = .8); text(5, 6.7, "AB *",  cex = .8) -->
 <!-- ``` -->
 <!-- \ -->
+
+
 <!-- ```{r HED_fmri_plot_HF,   message=FALSE, cache=TRUE, fig.align="right", fig.cap="Beta estimates from hippocampal formation during Hedonic reactivity testby session by intervention.", warning=F} -->
 <!-- # AVERAGED EFFECT ------------- -->
 <!-- dfH <- summarySEwithin(HED_fMRI, -->
@@ -1581,7 +1743,10 @@ Contrast Post > Pre in HF
 <!-- dev.off() -->
 <!-- ``` -->
 
+
+
 <!-- ```{r HED_fmri_plot_OFC,   message=FALSE, cache=TRUE, fig.align="right", fig.cap="Beta estimates from OFC during Hedonic reactivity test by session by intervention."} -->
+
 <!-- # AVERAGED EFFECT ------------- -->
 <!-- dfH <- summarySEwithin(HED_fMRI, -->
 <!--                        measurevar = "OFC_score", -->
@@ -1626,6 +1791,9 @@ Contrast Post > Pre in HF
 
 
 #### Packages {-}
+
+
+Thanks to all the package's authors and developers!
 ```{r, warning=F}
 report::report_packages()
 
