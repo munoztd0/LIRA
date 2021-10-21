@@ -101,13 +101,12 @@ labels <- c("-1" = "Pre", "1" = "Post")#for plots
 ```
 
 
-### Description
-TODO blabla\
 
 
 ```{r clean, include=FALSE}
 # this chunk runs R/clean.R (listed in the YAML) which does all the preprocessing
 ```
+
 ### Description
 Stan uses Hamiltonian Monte Carlo (HMC) to explore the target distribution — the posterior defined by a Stan program + data — by simulating the evolution of a Hamiltonian system.
 
@@ -831,8 +830,9 @@ grips = number of times participant exceeded the force threshold to acquire the 
 ```{r INST, cache=F, results = "hide"}
 
 # Model
-mf1 = formula(grips ~ trial*intervention*session + age + gender + BMI_V1  + hungry + GLP_diff + reelin_diff + (session|id) + (1|trial)) # LINEAR FIT  
-mf2 = formula(grips ~  lspline(trial,5)*intervention*session + age + gender + BMI_V1  + hungry + GLP_diff + reelin_diff + (session|id) + (1|trial)) # PIECEWISE REGRESSION WITH SPLINE AT 5
+mf1 = formula(grips ~ trialZ*intervention*session + age + gender + BMI_V1  + hungry + GLP_diff + reelin_diff + (session|id) + (1|trialZ)) # LINEAR FIT  
+mf2 = formula(grips ~  lspline(trialZ,-1.08327290)*intervention*session + age + gender + BMI_V1  + hungry + GLP_diff + reelin_diff + (session|id) + (1|trialZ)) # PIECEWISE REGRESSION WITH SPLINE AT 5 #(-1.08327290 is 5 after scaling)
+
 
 # -------------------------------------- Bayesian Regression Models using Stan -------------------------------------
 linmod = brm(mf1, data=INST, family = gaussian, prior = c(prior(normal(0, 3), class = "b", coef = ""), prior(normal(0, 100), class = "Intercept", coef = "")), sample_prior = T, save_pars = save_pars(all = TRUE), chains = chains,  iter = niter, warmup = warm, seed = 123, inits = 1, backend = 'cmdstanr', threads = threading(4))  # a lot to unwind here..  1) Generic weakly informative prior around 0 for fixed effects and very weak prior for the intercept 2) we need to sample priors and save parameters for computing BF  
@@ -862,7 +862,7 @@ pander(comp[c(1:3,8:9)]) # so the splinemod was preferred as the other model had
 
 param = mcmc_plot(object = bmod_full, pars =c("b_.*al"), type ="areas")
 param2 = mcmc_plot(object = bmod_full, pars =c("b_.*y", "b_.*ge", "b_.*diff", "b_.*V1"), type ="areas")
-
+param = param + scale_y_discrete(labels=c("trial<5", "trial>5", "trial<5:intervention", "trial>5:intervention","trial<5:session", "trial>5:session", "trial<5:intervention:session", "trial>5:intervention:session"))
 
 trace = mcmc_plot(object = bmod_full, pars =c("b_.*al"), type ="trace")
 trace2 = mcmc_plot(object = bmod_full, pars =c("b_.*y", "b_.*ge", "b_.*diff", "b_.*V1"), type ="trace")
@@ -898,12 +898,12 @@ full_tab = describe_posterior(bmod_full,
 
 full_tab = filter(full_tab, Parameter %notin% c("b_Intercept", "prior_beta", "prior_sigma"))
 
-x = attributes(full_tab); x$clean_parameters[c(2:3,12:15,17:18),5] = c("trial<5",       "trial>5", "trial<5:intervention", "trial>5:intervention","trial<5:session", "trial>5:session", "trial<5:intervention:session", "trial>5:group:session"); attributes(full_tab) = x
+x = attributes(full_tab); x$clean_parameters[c(2:3,12:15,17:18),5] = c("trial<5",       "trial>5", "trial<5:intervention", "trial>5:intervention","trial<5:session", "trial>5:session", "trial<5:intervention:session", "trial>5:intervention:session"); attributes(full_tab) = x
 
 
 # -------------------------------------- FREQUENTIST STATS: LRT + Bootstrap  -----------------------------------------------
 
-# fmod_spline =  update(fmod_full, ~ .-lspline(trial,5)) #evaluate trial spline
+# fmod_spline =  update(fmod_full, ~ .-lspline(trial,-1.08327290)) #evaluate trial spline
 # 
 # # p-value from bootstrap distribution
 # LRT_spline = PBmodcomp(fmod_full, fmod_spline, nsim = 500, seed = 123, cl=cores)
@@ -913,7 +913,7 @@ x = attributes(full_tab); x$clean_parameters[c(2:3,12:15,17:18),5] = c("trial<5"
 
 tab_model(bmod_full, show.p = F, show.intercept = F, show.se = T, title ="", show.re.var = F, digits = 3, dv.labels = "Number of Grips", file = "tmp/temp4.html", transform = NULL,  rm.terms = "beta")
 
-report = capture.output(sexit(bmod_full, ci=.9))
+report = capture.output(sexit(bmod_full, ci=.9, large = 0.69))
 
 ```
 
@@ -923,7 +923,7 @@ print(paste("Bayesian linear mixed model (estimated using MCMC sampling with" ,c
 
 full_tab
 
-report[4:7]
+x = report[c(4:5,16)]; x = gsub('b_lsplinetrialZM1.08327291', 'b_trial<5', x); x = gsub('b_lsplinetrialZM1.08327292', 'b_trial>5', x); x
 
 tables <- list.clean(readHTMLTable("tmp/temp4.html"), fun = is.null, recursive = FALSE)
 tables2 = tables[[1]] %>% janitor::row_to_names(row_number = 1)
@@ -933,8 +933,7 @@ tables2 <- as.matrix(tables2) %>% as_tibble()
 tables2[is.na(tables2)] <- "";  names(tables2) <- NULL; tmp = t( tables2[(length(full_tab$Parameter)+1):(length(full_tab$Parameter)+5),1:2]);
 tmp[,5][1] = "R2"; tmp[,5][2] = gsub(".*/","",tmp[,5][2])
 pander::pander(tmp)
-# tmp %>% kbl() %>%
-#   kable_styling(latex_options = "HOLD_position", position = "center", full_width = F) %>%  row_spec(1,bold=T)
+
 
 ```
 \
@@ -950,28 +949,30 @@ pander::pander(tmp)
 int_conditions <- list(
   session = setNames(c(-1, 1), c("pre", "post"))
 )
-plt = conditional_effects(bmod_full, effects = "trial:session",
+plt = conditional_effects(bmod_full, effects = "trialZ:session",
                     int_conditions = int_conditions) #easier to extract spline with brms
 
-dfTRIAL = as_tibble(plt$trial); dfTRIAL$grips = dfTRIAL$estimate__
+dfTRIAL = as_tibble(plt$trial); dfTRIAL$grips = dfTRIAL$estimate__ ; dfTRIAL$trial = rescale(dfTRIAL$trialZ, to = c(1,24))
+
 
 #by groups
+
 dfTRIALg <- summarySEwithin(INST.means,
                             measurevar = "grips",
                             withinvars = c("trial", "session"),
                             betweenvars = "intervention",
                             idvar = "id")
 
-dfTRIALg$trial       <- as.numeric(dfTRIALg$trial)
+dfTRIALg$trial       <- as.numeric(as.character(dfTRIALg$trial))
 
-pp <-  ggplot(dfTRIAL, aes(x =trial, y = grips)) +
+pp <-  ggplot(dfTRIAL, aes(x = trial, y = grips)) +
   geom_point(data = dfTRIALg, aes(shape = intervention), alpha = 0.3, color = 'black') +
   geom_line(data = dfTRIAL, size =1, color = pal[4]) +
   geom_ribbon(aes(ymin=grips-se__, ymax=grips+se__), fill = pal[4], alpha = 0.3, )+
   ylab('Number of Grips')+
   xlab('Trial') +
   scale_y_continuous(expand = c(0, 0),  limits = c(9.5,16.05),  breaks=c(seq.int(9,16, by = 1))) +
-  scale_x_continuous(expand = c(0, 0),  limits = c(0,25),  breaks=c(seq.int(1,25, by = 2))) +
+  #scale_x_continuous(expand = c(0, 0),  limits = c(-2,2),  breaks=c(seq.int(-2,2, by = 0.5))) +
   scale_shape_manual(name="Group", labels=c("Placebo", "Liraglutide"), values = c(1, 2, 18)) +
   theme_bw() +
   facet_wrap(~session, labeller=labeller(session = labels))
@@ -1193,7 +1194,7 @@ pp <- ggplot(PIT.p, aes(x = as.numeric(trial), y = AUC,
   scale_fill_manual(labels = c('-1'= 'CS-', "1" = 'CS+'), name="",
                     values = c("1"= pal[6], '-1'= pal[1])) +
   scale_y_continuous(expand = c(0, 0),  limits = c(50,200),  breaks=c(seq.int(50,200, by = 50))) +
-  scale_x_continuous(expand = c(0, 0),  limits = c(0,15),  breaks=c(seq.int(1,15, by = 2))) +
+  #scale_x_continuous(expand = c(0, 0),  limits = c(0,15),  breaks=c(seq.int(1,15, by = 2))) +
     scale_shape_manual(name="Group", labels=c("Placebo", "Liraglutide"), values = c(1, 2, 18)) +
   theme_bw() +
   facet_wrap(~session, labeller=labeller(session =labels))
@@ -1451,7 +1452,7 @@ pp <- ggplot(HED.p, aes(x = as.numeric(trial), y = perceived_liking,
   scale_fill_manual(labels = c('Pleasant', 'Neutral'), name = "",
                     values = c( "1" =pal[3], '-1'=pal[1])) +
   scale_y_continuous(expand = c(0, 0),  limits = c(0,100),  breaks=c(seq.int(0,100, by = 20))) +
-    scale_x_continuous(expand = c(0, 0),  limits = c(0,21),  breaks=c(seq.int(1,21, by = 2))) +
+    #scale_x_continuous(expand = c(0, 0),  limits = c(0,21),  breaks=c(seq.int(1,21, by = 2))) +
   guides(color=guide_legend(override.aes=list(fill=c(pal[3], pal[1]), color=c(pal[3], pal[1]))))+
     scale_shape_manual(name="Group", labels=c("Placebo", "Liraglutide"), values = c(1, 2, 18)) +
   theme_bw() +
@@ -1509,83 +1510,6 @@ cd /home/OBIWAN/LIRA/fMRI/HED_GLM
 ```
 # fMRI group Analysis
 
-
-<!-- # fMRI Analysis -->
-
-<!-- ```{bash} -->
-<!-- cwd=$(pwd) -->
-<!-- cd ~/OBIWAN/DERIVATIVES/GLM/AFNI/hedonicreactivity/LIRA/ # go to fMRI directory -->
-
-
-<!-- #I invite to take a look at the script -->
-<!-- nohup bash -x HED.txt |& tee diary.txt & # runs the AFNI group analysis script in the background and output logs as it goes in the "diary.txt" file -->
-
-cd /home/OBIWAN/DERIVATIVES/GLM/AFNI/hedonicreactivity/LIRA/ # go to fMRI directory
-
-
-#I invite to take a look at the script
-nohup bash -x HED.txt |& tee diary.txt & # runs the AFNI group analysis script in the background and output logs as it goes in the "diary.txt" file
-
-
-#Convert from AFNI format to NIFTI #-prefix test lme+tlrc[i]
-for i in  8 10 12
-  do 3dAFNItoNIFTI -prefix LME_8_con${i}_z LME_8+tlrc[${i}]
-     fslmaths LME_8_con${i}_z -ztop -add -1 -mul -1 LME_8_con${i}_1-p # convert to pvalue then inverse it for display 
-done
-
-cd $cwd
-
-```
-
-check out "analysis_LIRA_fMRI.R" for more details
-```{r HED_fmri,  warning=FALSE}
-
-# mdl.hf = aov_car(data = inter, HF_inter ~ intervention + BMI_diff + age + Error(id), factorize = F, type = "II", anova_table = list(correction = "GG", es = "pes"))
-# 
-# res = nice(mdl.hf, MSE=F); ref_grid(mdl.hf)  #triple check everything is centered at 0
-# 
-# 
-# #calculate Partial eta-squared and its 90 % CI for each effect
-# PES.hf = pes_ci(data = inter, HF_inter ~ intervention + BMI_diff + age + Error(id), conf.level = .90, factorize = FALSE, anova.type = "II", epsilon="none") ;
-# mdl.hf.emms = emmeans(mdl.hf, pairwise ~ intervention)
-
-<!-- ``` -->
-<!-- Contrast Post > Pre in HF -->
-<!-- \ -->
-<!-- ```{r HED_fmri_res, message=F, warning=F} -->
-<!-- res$p.value = as.numeric(res$p.value) -->
-<!-- res$p.value = ifelse(res$p.value < 0.05,paste("<span style=\" font-weight: bold; \" >" ,sprintf("%.3f",res$p.value), "</span>"),  paste("<span>" ,sprintf("%.3f",res$p.value), "</span>")) -->
-
-<!-- res$F = unlist(str_split(gsub("[^0-9.,-]", "", res$F), ","));res$pes = unlist(str_split(gsub("[^0-9.,-]", "", res$pes), ",")); -->
-<!-- res$`90% CI` = paste(sprintf("%.3f",PES.hf[,2]), "-", sprintf("%.3f",PES.hf[,3])) -->
-
-<!-- res$p.value[1]= "<span style=\" font-weight: bold;    \" >\u003C 0.001</span>" -->
-<!-- #res$pes[c(5,7,8)]= c("\u003C 0.001") -->
-<!-- colnames(res)[3:5] = c( paste("F(", res$df[1], ")", sep=""),"&eta;<sub>p</sub><sup>2</sup>", "p") -->
-<!-- res[c(1,4,6,3,5)]  %>% kbl(digits = 2, escape = F,row.names = F)  %>% -->
-<!--   kable_styling(latex_options = "striped", position = "center", full_width = F) -->
-<!-- #print('PES: intervention: Overall higher weight loss for treament (Liraglutide) group') -->
-<!-- #PES.weight[1,] -->
-<!-- ``` -->
-<!-- ```{r message = FALSE, echo=FALSE, results='hide', fig.show="hold", out.width="25%", fig.align="center", fig.cap = 'Model assumptions.', warning=F} -->
-<!-- mod = lm(HF_inter ~ intervention + BMI_diff + age, data = inter) -->
-<!-- x = plot_model(mod, type = "diag") -->
-<!-- x[c(2,3,4,1)] -->
-<!--  #check assumptions -->
-<!-- ``` -->
-<!-- \ -->
-<!-- \ -->
-<!-- ```{r HED_fmri_plot, echo=FALSE,  message=FALSE, cache=TRUE, fig.align="right", fig.cap="Beta estimates from hippocampal formation during Hedonic reactivity test (Post > Pre) by intervention and correlation with weight loss.", warning=F} -->
-
-This part is not run here for different reasons (time it take and need to be on the cluster)
-```{bash, eval=FALSE}
-cwd=$(pwd)
-cd /home/OBIWAN/LIRA/fMRI/HED_GLM
-cd $cwd
-```
-
-# fMRI group Analysis
-
 ```{bash, eval = FALSE}
 cwd=$(pwd)
 
@@ -1619,8 +1543,8 @@ check out "analysis_LIRA_fMRI.R" for more details
 # mdl.hf.emms = emmeans(mdl.hf, pairwise ~ intervention)
 
 ```
-<!-- Contrast Post > Pre in HF -->
-<!-- \ -->
+Contrast Post > Pre in HF
+\
 ```{r HED_fmri_res, message=F, warning=F}
 # res$p.value = as.numeric(res$p.value)
 # res$p.value = ifelse(res$p.value < 0.05,paste("<span style=\" font-weight: bold; \" >" ,sprintf("%.3f",res$p.value), "</span>"),  paste("<span>" ,sprintf("%.3f",res$p.value), "</span>"))
@@ -1698,8 +1622,6 @@ check out "analysis_LIRA_fMRI.R" for more details
 <!-- text(3, 6.5, "A ***",  cex = .8); text(7, 6.5, "B *",  cex = .8);  text(5.8, 4.9, "***",  cex = .8); text(5, 6.7, "AB *",  cex = .8) -->
 <!-- ``` -->
 <!-- \ -->
-
-
 <!-- ```{r HED_fmri_plot_HF,   message=FALSE, cache=TRUE, fig.align="right", fig.cap="Beta estimates from hippocampal formation during Hedonic reactivity testby session by intervention.", warning=F} -->
 <!-- # AVERAGED EFFECT ------------- -->
 <!-- dfH <- summarySEwithin(HED_fMRI, -->
@@ -1743,10 +1665,7 @@ check out "analysis_LIRA_fMRI.R" for more details
 <!-- dev.off() -->
 <!-- ``` -->
 
-
-
 <!-- ```{r HED_fmri_plot_OFC,   message=FALSE, cache=TRUE, fig.align="right", fig.cap="Beta estimates from OFC during Hedonic reactivity test by session by intervention."} -->
-
 <!-- # AVERAGED EFFECT ------------- -->
 <!-- dfH <- summarySEwithin(HED_fMRI, -->
 <!--                        measurevar = "OFC_score", -->

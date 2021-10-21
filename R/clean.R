@@ -97,6 +97,7 @@ INST$gender = INST$gender = ifelse(INST$gender == "0", -1, 1)
 INST$session = INST$session = ifelse(INST$session == "second", -1, 1)
 #as.factor(revalue(PAV$session, c(second="-1", third="1"))) #change value of session
 INST$intervention = ifelse(INST$intervention == "0", -1, 1)  #change value of intervention
+INST$trialZ = scale(INST$trial)
 # INST$session = as.factor(revalue(INST$session, c(second="0", third="1"))) #change value of session
 
 # get the averaged dataset
