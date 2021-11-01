@@ -23,7 +23,7 @@ repro:
     medic: data/medic.csv
     HED_fMRI: data/HED_fmri.csv
     
-  packages: [ aaronpeikert/repro@devel, crsh/papaja@devel, tinylabels, apaTables, MBESS, afex, ggplot2, ggpubr, Rmisc, emmeans, tidyr, BayesFactor, bayestestR, devtools, lspline, kableExtra, sjPlot, knitr, XML, rlist, janitor, optimx, ggthemes, dplyr, JWileymisc, corrplot, caret, intmed, stringr, cowplot, pander, psych, cmdstanr, brms, tidybayes, tibble, pbkrtest]
+  packages: [ aaronpeikert/repro@devel, crsh/papaja@devel, tinylabels, apaTables, MBESS, afex, ggplot2, ggpubr, Rmisc, emmeans, tidyr, BayesFactor, bayestestR, devtools, lspline, kableExtra, sjPlot, knitr, XML, rlist, janitor, optimx, ggthemes, dplyr, JWileymisc, corrplot, caret, intmed, stringr, cowplot, pander, psych, cmdstanr, brms, tidybayes, tibble, pbkrtest, scales]
   scripts: R/clean.R
   apt:
     - libgsl0-dev
@@ -77,7 +77,7 @@ This file was automatically created via `the Repro package (version 0.1.0)` usin
 
 
 ```{r options, results='hide', message=FALSE, warning=FALSE}
-niter = 500; warm = 100; chains = 4; cores = 4; nsim = 10000 # number of iterations (to change if you want to quick check and warmups (BUT chains and BF might be really unstable if you have less than 20'000 iter (4x5000) ) #or also parallel::detectCores()/2)
+niter = 5000; warm = 1000; chains = 4; cores = 4; nsim = 10000 # number of iterations (to change if you want to quick check and warmups (BUT chains and BF might be really unstable if you have less than 20'000 iter (4x5000) ) #or also parallel::detectCores()/2)
 options(scipen = 666, warn=-1, contrasts=c("contr.sum","contr.poly"), mc.cores = cores)  #remove scientific notation # remove warnings #set contrasts to sum ! #remove scientific notation # remove warnings #set contrasts to sum !
  #cl = parallel::detectCores()/2
 set.seed(666) #set random seed
