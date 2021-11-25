@@ -1,9 +1,13 @@
 {
-    "path" : "~/Desktop/SwitchDrive/LIRA/R",
+    "path" : "~/REWOD/CODE/behavioral",
     "sortOrder" : [
         {
-            "ascending" : false,
+            "ascending" : true,
             "columnIndex" : 2
+        },
+        {
+            "ascending" : false,
+            "columnIndex" : 4
         }
     ]
 }
